@@ -40,13 +40,14 @@ const Layout: React.FC<LayoutProps> = ({ user, currentView, onChangeView, onLogo
 
     if (role === UserRole.HR || role === UserRole.ADMIN) {
       items.push({ label: 'Employees', icon: Users, id: ViewState.EMPLOYEES });
-      if (role === UserRole.HR) {
-          items.push({ label: 'Attendance', icon: CalendarCheck, id: ViewState.ATTENDANCE });
-          items.push({ label: 'Leave Mgmt', icon: Coffee, id: ViewState.LEAVE });
-          items.push({ label: 'Payroll', icon: DollarSign, id: ViewState.PAYROLL });
-      }
+      items.push({ label: 'Attendance', icon: CalendarCheck, id: ViewState.ATTENDANCE });
+      items.push({ label: 'Leave Mgmt', icon: Coffee, id: ViewState.LEAVE });
+      items.push({ label: 'Payroll', icon: DollarSign, id: ViewState.PAYROLL });
       items.push({ label: 'Reports', icon: BarChart3, id: ViewState.REPORTS });
-      // Added Settings for HR/Admin
+    }
+
+    // Settings only accessible to ADMIN
+    if (role === UserRole.ADMIN) {
       items.push({ label: 'Settings', icon: Settings, id: ViewState.SETTINGS });
     }
 

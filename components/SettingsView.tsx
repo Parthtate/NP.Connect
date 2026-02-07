@@ -19,7 +19,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, holidays, onUpdat
 
   const handleSaveSettings = () => {
     onUpdateSettings({ ...settings, defaultWorkingDays: workingDays });
-    alert('Settings saved successfully!');
   };
 
   const handleAddHoliday = (e: React.FormEvent) => {

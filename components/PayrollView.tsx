@@ -326,7 +326,6 @@ const PayslipModal = ({ data, onClose }: { data: {emp: Employee, record: Payroll
       pdf.save(`payslip_${record.month}_${emp.fullName.replace(/\s+/g, '_')}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }

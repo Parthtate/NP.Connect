@@ -169,9 +169,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                    ))}
                    {myLeaves.length === 0 && <p className="text-slate-500 text-sm text-center">No leave history</p>}
                 </div>
-              </div>
-           </div>
-        </div>
+               </div>
+            </div>
+         </div>
+
+            {/* Announcements for Employee */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Gift size={20} className="text-purple-500"/> Announcements
+               </h3>
+               <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                  {announcements.map((a: Announcement) => (
+                    <div key={a.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                       <h4 className="font-bold text-slate-800 text-sm">{a.title}</h4>
+                       <p className="text-xs text-slate-600 mt-1">{a.content}</p>
+                       <p className="text-[10px] text-slate-400 mt-2 text-right">{a.date}</p>
+                    </div>
+                  ))}
+                  {announcements.length === 0 && <p className="text-slate-500 text-sm text-center">No announcements</p>}
+               </div>
+            </div>
       </div>
     );
   }
@@ -181,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">HR Dashboard</h2>
+          <h2 className="text-2xl font-bold text-slate-800">{user.role === UserRole.ADMIN ? 'Admin Dashboard' : 'HR Dashboard'}</h2>
           <p className="text-slate-500 mt-1">Overview of company workforce</p>
         </div>
         <div className="mt-4 md:mt-0 px-4 py-2 bg-white rounded-lg border shadow-sm flex items-center space-x-2">

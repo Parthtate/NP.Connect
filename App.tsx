@@ -10,7 +10,7 @@ import PayrollView from './components/PayrollView';
 import SettingsView from './components/SettingsView';
 import Reports from './components/Reports';
 import { ShieldCheck, User as UserIcon, Mail, ArrowRight, Loader2 } from 'lucide-react';
-import { supabase } from './lib/supabaseClient';
+import { supabase, supabaseUrl } from './lib/supabaseClient';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -65,6 +65,7 @@ const App: React.FC = () => {
       fetchAttendance();
       fetchLeaves();
       fetchPayroll();
+      fetchHolidays();
       fetchSettings();
       fetchAnnouncements();
     }
@@ -83,12 +84,35 @@ const App: React.FC = () => {
       if (error) throw error;
 
       if (data) {
+        let employeeId = data.employee_id;
+        
+        // Auto-link employee by email if not already linked
+        if (!employeeId && data.email) {
+          // Try to find employee record with matching email
+          const { data: empData } = await supabase
+            .from('employees')
+            .select('id')
+            .eq('email', data.email)
+            .single();
+          
+          if (empData?.id) {
+            // Update profile with employee_id
+            await supabase
+              .from('profiles')
+              .update({ employee_id: empData.id })
+              .eq('id', userId);
+            
+            employeeId = empData.id;
+            console.log('Auto-linked employee:', employeeId);
+          }
+        }
+        
         setCurrentUser({
           id: data.id,
           name: data.full_name || data.email,
           email: data.email,
           role: data.role as UserRole,
-          employeeId: data.employee_id
+          employeeId: employeeId
         });
       }
     } catch (error) {
@@ -256,10 +280,44 @@ const App: React.FC = () => {
     const { error } = await supabase.from('employees').insert(dbPayload);
     
     if (error) {
-      alert('Error adding employee: ' + error.message);
-    } else {
-      fetchEmployees();
+      console.error('Error adding employee:', error.message);
+      return;
     }
+
+    // Employee created successfully, now create auth user and send magic link
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/create-employee-auth`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: data.email,
+            full_name: data.fullName,
+            employee_id: newId,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('✅ Employee created and invitation sent:', result.message);
+      } else {
+        console.warn('⚠️ Employee created but invitation failed:', result.error);
+        console.warn('Employee can still login using magic link from the login page.');
+      }
+    } catch (inviteError: any) {
+      console.error('Error sending invitation:', inviteError.message);
+      console.warn('Employee was created but invitation email failed. They can request a magic link from the login page.');
+    }
+
+    fetchEmployees();
   };
 
   const updateEmployee = async (data: Employee) => {
@@ -290,9 +348,8 @@ const App: React.FC = () => {
       // Also cleanup profile if exists (auto-cascade often handles this, but good to be safe)
       // Actually, RLS handles it.
       fetchEmployees();
-      alert('Employee deleted successfully.');
     } else {
-      alert('Error deleting employee: ' + error.message);
+      console.error('Error deleting employee:', error.message);
     }
   };
 
@@ -311,7 +368,7 @@ const App: React.FC = () => {
 
   const employeeCheckIn = async () => {
     if (!currentUser?.employeeId) {
-      alert('Error: Your account is not linked to an employee record.');
+      console.warn('Account not linked to an employee record');
       return;
     }
     const today = new Date().toISOString().split('T')[0];
@@ -326,7 +383,7 @@ const App: React.FC = () => {
 
     const { error } = await supabase.from('attendance').upsert(payload, { onConflict: 'employee_id,date' });
     if (!error) fetchAttendance();
-    else alert('Check-in failed: ' + error.message);
+    else console.error('Check-in failed:', error.message);
   };
 
   const employeeCheckOut = async () => {
@@ -429,10 +486,9 @@ const App: React.FC = () => {
 
     const { error } = await supabase.from('payroll').upsert(newPayrollRecords, { onConflict: 'employee_id,month' });
     if (error) {
-      alert('Error processing payroll: ' + error.message);
+      console.error('Error processing payroll:', error.message);
     } else {
       fetchPayroll();
-      alert(`Payroll processed for ${month} successfully!`);
     }
   };
 
@@ -560,8 +616,54 @@ const App: React.FC = () => {
     );
   }
 
-  // Router Logic
+  // Router Logic with Role Guards
   const renderContent = () => {
+      // Defensive role checks - prevent unauthorized access
+      const restrictedToHRAdmin = [ViewState.EMPLOYEES, ViewState.ATTENDANCE, ViewState.LEAVE, ViewState.PAYROLL, ViewState.REPORTS];
+      const restrictedToAdmin = [ViewState.SETTINGS];
+
+      // Check if employee is trying to access restricted views
+      if (currentUser.role === UserRole.EMPLOYEE && restrictedToHRAdmin.includes(currentView)) {
+        return (
+          <div className="p-8 text-center bg-white rounded-xl shadow-sm border border-red-100">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Access Denied</h3>
+            <p className="text-slate-600">You don't have permission to view this page.</p>
+            <button 
+              onClick={() => setCurrentView(ViewState.DASHBOARD)}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        );
+      }
+
+      // Check if HR is trying to access ADMIN-only views
+      if (currentUser.role === UserRole.HR && restrictedToAdmin.includes(currentView)) {
+        return (
+          <div className="p-8 text-center bg-white rounded-xl shadow-sm border border-orange-100">
+            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Admin Access Required</h3>
+            <p className="text-slate-600">This page is only accessible to administrators.</p>
+            <button 
+              onClick={() => setCurrentView(ViewState.DASHBOARD)}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        );
+      }
+
       switch (currentView) {
           case ViewState.DASHBOARD:
               return <Dashboard 

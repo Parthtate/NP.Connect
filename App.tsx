@@ -251,10 +251,25 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await (supabase.auth as any).signOut();
-    setCurrentUser(null);
+    // Clear all application state first
+    setEmployees([]);
+    setAttendance({});
+    setLeaves([]);
+    setPayroll({});
+    setHolidays([]);
+    setAnnouncements([]);
+    setSettings({ defaultWorkingDays: 26 });
+    
+    // Clear login form
     setLoginEmail('');
     setLoginPassword('');
+    setLoginError('');
+    
+    // Sign out from Supabase (this will trigger the auth state listener)
+    await (supabase.auth as any).signOut();
+    
+    // Clear current user (auth listener will also do this, but we do it explicitly)
+    setCurrentUser(null);
   };
 
   const addEmployee = async (data: Omit<Employee, 'id'>) => {

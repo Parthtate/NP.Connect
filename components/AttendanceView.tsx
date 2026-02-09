@@ -162,10 +162,10 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Mark Attendance List */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-800">Mark Today's Attendance ({today})</h3>
+            <h3 className="text-lg font-semibold text-slate-800">Today's Attendance - View Only ({today})</h3>
+            <p className="text-sm text-slate-500 mt-1">Employees manage their own attendance from the dashboard</p>
           </div>
           <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
             {employees.map(emp => {
@@ -180,26 +180,31 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
                       <div className="font-medium text-slate-900">{emp.fullName}</div>
                       <div className="text-xs text-slate-500">{emp.id} • {emp.designation}</div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => onMarkAttendance(emp.id, today, 'Present')}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${att?.status === 'Present' ? 'bg-green-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      <Check size={14} /> Present
-                    </button>
-                    <button 
-                      onClick={() => onMarkAttendance(emp.id, today, 'Half Day')}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${att?.status === 'Half Day' ? 'bg-yellow-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      <Clock size={14} /> Half Day
-                    </button>
-                    <button 
-                      onClick={() => onMarkAttendance(emp.id, today, 'Absent')}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${att?.status === 'Absent' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      <X size={14} /> Absent
-                    </button>
+                 </div>
+                  {/* Read-only status display */}
+                  <div className="flex items-center gap-3">
+                    {att ? (
+                      <>
+                        <span className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2
+                          ${att.status === 'Present' ? 'bg-green-100 text-green-700' : 
+                            att.status === 'Half Day' ? 'bg-yellow-100 text-yellow-700' : 
+                            'bg-red-100 text-red-700'}`}>
+                          {att.status === 'Present' && <Check size={16} />}
+                          {att.status === 'Half Day' && <Clock size={16} />}
+                          {att.status === 'Absent' && <X size={16} />}
+                          {att.status}
+                        </span>
+                        {att.checkIn && (
+                          <span className="text-xs text-slate-500">
+                            In: {att.checkIn} {att.checkOut && `• Out: ${att.checkOut}`}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-500">
+                        Not Marked
+                      </span>
+                    )}
                   </div>
                 </div>
               );

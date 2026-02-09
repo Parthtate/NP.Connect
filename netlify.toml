@@ -1,0 +1,57 @@
+# Netlify Configuration for NP.Connect HRMS
+# https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  # Build command to run
+  command = "npm run build"
+  
+  # Directory to publish (Vite outputs to 'dist' by default)
+  publish = "dist"
+  
+  # Node version (optional but recommended for consistency)
+  # environment = { NODE_VERSION = "18" }
+
+# SPA routing - redirect all requests to index.html for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Prevent clickjacking
+    X-Frame-Options = "DENY"
+    
+    # Prevent MIME type sniffing
+    X-Content-Type-Options = "nosniff"
+    
+    # Enable XSS protection
+    X-XSS-Protection = "1; mode=block"
+    
+    # Referrer policy
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Content Security Policy (adjust as needed)
+    # Note: TailwindCSS is loaded from CDN, esm.sh for modules
+    Content-Security-Policy = """
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://esm.sh;
+      style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: https:;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+      frame-ancestors 'none';
+    """
+
+# Caching for static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Environment variables are set in Netlify UI or CLI:
+# VITE_SUPABASE_URL=https://your-project.supabase.co
+# VITE_SUPABASE_ANON_KEY=your-anon-key

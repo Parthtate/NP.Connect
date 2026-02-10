@@ -70,11 +70,11 @@ export const MagicLinkLogin: React.FC = () => {
               <img 
                 src="/nppmt-logo.jpeg" 
                 alt="NPPMT Logo" 
-                className="w-35 h-35 object-contain"
+                className="w-30 h-20 object-contain"
               />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-black tracking-tight">Passwordless Login</h1>
+          <h3 className="text-2xl font-bold text-black tracking-tight">Passwordless Login</h3>
           <p className="text-black mt-2 text-sm">Enter your email to receive a magic link</p>
         </div>
 

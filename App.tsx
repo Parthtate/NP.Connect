@@ -564,7 +564,7 @@ const App: React.FC = () => {
                 <img 
                   src="/nppmt-logo.jpeg" 
                   alt="NPPMT Logo" 
-                  className="w-30 h-30 object-contain"
+                  className="w-30 h-20 object-contain"
                 />
               </div>
             </div>

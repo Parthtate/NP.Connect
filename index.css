@@ -1,15 +1,7 @@
-/* NP.Connect HRMS - Custom Styles */
-/* TailwindCSS is loaded via CDN in index.html */
-/* This file is for any custom CSS overrides if needed in the future */
+/* Tailwind CSS v4 */
+@import "tailwindcss";
 
-/* Ensure box-sizing is consistent (TailwindCSS already handles this, but just in case) */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-/* Smooth scrolling for the entire page */
+/* Custom Styles */
 html {
   scroll-behavior: smooth;
 }

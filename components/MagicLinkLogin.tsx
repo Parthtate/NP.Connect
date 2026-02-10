@@ -33,16 +33,16 @@ export const MagicLinkLogin: React.FC = () => {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-            <CheckCircle className="text-green-600 w-8 h-8" />
+      <div className="min-h-screen bg-linear-to-br from-slate-900 to-slate-800 flex flex-col justify-center items-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl overflow-hidden p-10 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+            <CheckCircle className="text-green-600 w-10 h-10" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Check Your Email</h2>
-          <p className="text-slate-600 mb-6">
-            We've sent a magic link to <strong>{email}</strong>
+          <h2 className="text-3xl font-bold text-black mb-3">Check Your Email</h2>
+          <p className="text-slate-600 mb-6 text-base">
+            We've sent a magic link to <strong className="text-black">{email}</strong>
           </p>
-          <p className="text-sm text-slate-500 mb-4">
+          <p className="text-sm text-slate-500 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
             Click the link in your email to sign in. The link will expire in 1 hour.
           </p>
           <button
@@ -50,7 +50,7 @@ export const MagicLinkLogin: React.FC = () => {
               setSent(false);
               setEmail('');
             }}
-            className="text-blue-600 hover:underline text-sm font-medium"
+            className="text-blue-600 hover:text-blue-700 hover:underline text-sm font-semibold transition-colors"
           >
             Use a different email
           </button>
@@ -60,17 +60,22 @@ export const MagicLinkLogin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-slate-50 p-8 text-center border-b border-slate-100">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4 shadow-lg shadow-blue-600/30">
-            <Mail className="text-white w-8 h-8" />
+    <div className="min-h-screen bg-linear-to-br from-slate-900 to-slate-800 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden">
+        {/* Header with Logo */}
+        <div className="bg-white p-8 text-center">
+          {/* Company Logo */}
+          <div className="flex justify-center">
+            <div className="bg-white rounded-2xl p-4">
+              <img 
+                src="/nppmt-logo.jpeg" 
+                alt="NPPMT Logo" 
+                className="w-35 h-35 object-contain"
+              />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Passwordless Login</h1>
-          <p className="text-slate-600 mt-2 text-sm">
-            Enter your email to receive a magic link
-          </p>
+          <h1 className="text-3xl font-bold text-black tracking-tight">Passwordless Login</h1>
+          <p className="text-black mt-2 text-sm">Enter your email to receive a magic link</p>
         </div>
 
         {/* Form */}
@@ -79,25 +84,29 @@ export const MagicLinkLogin: React.FC = () => {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                <Mail className="inline w-4 h-4 mr-1" />
                 Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your.email@company.com"
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                disabled={loading}
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm bg-white text-slate-900 placeholder-slate-400"
+                  disabled={loading}
+                />
+              </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="text-red-500 text-xs flex items-center gap-1 bg-red-50 p-2 rounded">
+                <AlertCircle size={12} />
+                {error}
               </div>
             )}
 
@@ -105,24 +114,29 @@ export const MagicLinkLogin: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70"
             >
               {loading ? (
-                <>
-                  <Loader2 className="animate-spin w-5 h-5" />
-                  Sending...
-                </>
+                <Loader2 className="animate-spin" size={18} />
               ) : (
                 <>
-                  <Mail className="w-5 h-5" />
+                  <Mail size={16} />
                   Send Magic Link
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500">
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-slate-500">or</span>
+              </div>
+            </div>
+            <p className="mt-4 text-center text-sm text-slate-600">
               Admin or HR?{' '}
               <a
                 href="/login"

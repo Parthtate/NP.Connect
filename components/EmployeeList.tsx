@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Employee } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Phone, User as UserIcon, Building, CreditCard, Banknote } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Phone, User as UserIcon, Building, CreditCard, Banknote, Calendar } from 'lucide-react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
+import { formatDate } from '../utils/dateUtils';
 
 interface EmployeeListProps {
   employees: Employee[];
@@ -152,7 +153,10 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onAddEmployee, o
                     </span>
                   </td>
                   <td className="p-4 text-sm text-slate-600">
-                    {new Date(emp.dateOfJoining).toLocaleDateString()}
+                    <span className="flex items-center gap-2">
+                      <Calendar size={16} className="text-blue-500" />
+                      {formatDate(emp.dateOfJoining)}
+                    </span>
                   </td>
                   <td className="p-4 text-right space-x-2">
                     <button 

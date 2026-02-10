@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { User, UserRole, Employee, AttendanceRecord, LeaveRequest, Holiday } from '../types';
-import { Users, Clock, Calendar, DollarSign, TrendingUp, AlertCircle, CheckCircle, Hourglass, XCircle, LogIn, LogOut, Gift, ArrowRight, Trash2, Plus } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Calendar, Clock, LogIn, LogOut, CheckCircle, Hourglass, User as UserIcon, TrendingUp, Award, Users, DollarSign, AlertCircle, Gift, ArrowRight, Trash2, Plus } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { formatDateLong } from '../utils/dateUtils';
 
 export interface Announcement {
   id: string;
@@ -68,7 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                   {time.toLocaleTimeString([], { hour12: false })}
                 </div>
                 <div className="text-slate-400 mt-1 font-medium">
-                  {time.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  {formatDateLong(time)}
                 </div>
               </div>
            </div>
@@ -203,7 +204,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
         </div>
         <div className="mt-4 md:mt-0 px-4 py-2 bg-white rounded-lg border shadow-sm flex items-center space-x-2">
           <Calendar className="text-blue-600" size={20} />
-          <span className="font-medium text-slate-700">{time.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <span className="font-medium text-slate-700">{formatDateLong(time)}</span>
         </div>
       </div>
 

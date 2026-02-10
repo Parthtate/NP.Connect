@@ -1,6 +1,7 @@
 import React from 'react';
 import { AttendanceRecord, Employee, UserRole } from '../types';
 import { Check, Clock, User as UserIcon, X, Download, Calendar, FileText } from 'lucide-react';
+import { formatDateForCSV } from '../utils/dateUtils';
 
 interface AttendanceViewProps {
   role: UserRole;
@@ -37,7 +38,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
       return [
         record.employeeId,
         `"${emp?.fullName || 'Unknown'}"`,
-        record.date,
+        formatDateForCSV(record.date), // Fixed: Use DD-MM-YYYY format for Excel
         record.status,
         record.checkIn || '',
         record.checkOut || ''
@@ -51,7 +52,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `attendance_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `attendance_export_${formatDateForCSV(new Date())}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

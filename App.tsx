@@ -557,12 +557,33 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col justify-center items-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="bg-slate-50 p-8 text-center border-b border-slate-100">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4 shadow-lg shadow-blue-600/30">
-              <ShieldCheck className="text-white w-8 h-8" />
+          <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-8 text-center">
+            {/* Company Logo */}
+            <div className="flex justify-center mb-4">
+              <div className="bg-white rounded-2xl p-4 shadow-2xl">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style={{ stopColor: '#3B82F6', stopOpacity: 1 }} />
+                      <stop offset="100%" style={{ stopColor: '#8B5CF6', stopOpacity: 1 }} />
+                    </linearGradient>
+                  </defs>
+                  {/* Connected nodes representing network/connectivity */}
+                  <circle cx="20" cy="20" r="8" fill="url(#logoGradient)" />
+                  <circle cx="60" cy="20" r="8" fill="url(#logoGradient)" />
+                  <circle cx="20" cy="60" r="8" fill="url(#logoGradient)" />
+                  <circle cx="60" cy="60" r="8" fill="url(#logoGradient)" />
+                  <circle cx="40" cy="40" r="10" fill="url(#logoGradient)" />
+                  {/* Connection lines */}
+                  <line x1="20" y1="20" x2="40" y2="40" stroke="url(#logoGradient)" strokeWidth="3" />
+                  <line x1="60" y1="20" x2="40" y2="40" stroke="url(#logoGradient)" strokeWidth="3" />
+                  <line x1="20" y1="60" x2="40" y2="40" stroke="url(#logoGradient)" strokeWidth="3" />
+                  <line x1="60" y1="60" x2="40" y2="40" stroke="url(#logoGradient)" strokeWidth="3" />
+                </svg>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{APP_NAME}</h1>
-            <p className="text-slate-500 mt-2 text-sm">Secure Employee Management System</p>
+            <h1 className="text-3xl font-bold text-white tracking-tight">{APP_NAME}</h1>
+            <p className="text-blue-100 mt-2 text-sm">Secure Employee Management System</p>
           </div>
           
           <div className="p-8">

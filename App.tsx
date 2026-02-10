@@ -88,6 +88,8 @@ const App: React.FC = () => {
       if (data) {
         let employeeId = data.employee_id;
         
+
+        
         // Auto-link employee by email if not already linked
         if (!employeeId && data.email) {
           try {
@@ -365,11 +367,11 @@ const App: React.FC = () => {
   };
 
   const deleteEmployee = async (id: string) => {
-    // Check if HR (or Admin)
+
+    
+    // Then delete the employee
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (!error) {
-      // Also cleanup profile if exists (auto-cascade often handles this, but good to be safe)
-      // Actually, RLS handles it.
       fetchEmployees();
     } else {
       console.error('Error deleting employee:', error.message);

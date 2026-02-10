@@ -37,7 +37,8 @@ CREATE TABLE profiles (
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT profiles_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL
 );
 
 -- =====================================================
@@ -229,6 +230,26 @@ DROP TRIGGER IF EXISTS update_employees_updated_at ON employees;
 CREATE TRIGGER update_employees_updated_at
   BEFORE UPDATE ON employees
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Trigger to sync employee name to profile
+CREATE OR REPLACE FUNCTION sync_employee_name_to_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- When employee full_name is updated, sync it to linked profile
+  IF (TG_OP = 'UPDATE' AND OLD.full_name IS DISTINCT FROM NEW.full_name) OR TG_OP = 'INSERT' THEN
+    UPDATE public.profiles
+    SET full_name = NEW.full_name
+    WHERE employee_id = NEW.id;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS sync_employee_name_trigger ON employees;
+CREATE TRIGGER sync_employee_name_trigger
+  AFTER INSERT OR UPDATE OF full_name ON employees
+  FOR EACH ROW EXECUTE FUNCTION sync_employee_name_to_profile();
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES

@@ -12,7 +12,9 @@ import {
   Menu,
   BarChart3,
   FileText,
-  Mail
+  Mail,
+  ShieldCheck,
+  UserCircle
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -25,6 +27,40 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ user, currentView, onChangeView, onLogout, children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
+  // Get role icon and styling based on user role
+  const getRoleIcon = (role: UserRole) => {
+    switch (role) {
+      case UserRole.ADMIN:
+        return {
+          icon: ShieldCheck,
+          bgColor: 'bg-purple-500/10',
+          textColor: 'text-purple-400',
+          label: 'Admin'
+        };
+      case UserRole.HR:
+        return {
+          icon: Users,
+          bgColor: 'bg-blue-500/10',
+          textColor: 'text-blue-400',
+          label: 'HR'
+        };
+      case UserRole.EMPLOYEE:
+        return {
+          icon: UserCircle,
+          bgColor: 'bg-green-500/10',
+          textColor: 'text-green-400',
+          label: 'Employee'
+        };
+      default:
+        return {
+          icon: UserCircle,
+          bgColor: 'bg-slate-500/10',
+          textColor: 'text-slate-400',
+          label: role
+        };
+    }
+  };
 
   // Define navigation items based on Role
   const getNavItems = (role: UserRole): NavItem[] => {
@@ -107,7 +143,18 @@ const Layout: React.FC<LayoutProps> = ({ user, currentView, onChangeView, onLogo
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user.name}</p>
-              <p className="text-xs text-slate-400 truncate capitalize">{user.role.toLowerCase()}</p>
+              {(() => {
+                const roleConfig = getRoleIcon(user.role);
+                const RoleIcon = roleConfig.icon;
+                return (
+                  <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${roleConfig.bgColor} mt-1`}>
+                    <RoleIcon size={12} className={roleConfig.textColor} />
+                    <span className={`text-xs font-semibold ${roleConfig.textColor}`}>
+                      {roleConfig.label}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <button

@@ -47,6 +47,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
   const myTodayAtt = myEmployeeId ? attendance[`${myEmployeeId}-${today}`] : null;
   const myLeaves = leaves.filter(l => l.employeeId === myEmployeeId);
   
+  // Calculate leave balance for employee
+  const calculateLeaveBalance = () => {
+    const annualLeaveQuota = 24; // Standard annual leave days
+    const currentYear = new Date().getFullYear();
+    
+    // Filter approved leaves for current year
+    const approvedLeaves = myLeaves.filter(l => 
+      l.status === 'Approved' && 
+      l.startDate.startsWith(currentYear.toString())
+    );
+    
+    // Calculate total days used
+    const usedDays = approvedLeaves.reduce((total, leave) => {
+      const start = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return total + days;
+    }, 0);
+    
+    return Math.max(0, annualLeaveQuota - usedDays); // Ensure non-negative
+  };
+  
   // Upcoming Holidays logic
   const upcomingHolidays = holidays
     .filter(h => h.date >= today)
@@ -131,7 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
 
            {/* Stats Column */}
            <div className="space-y-6">
-              <StatCard title="Leave Balance" value="12 Days" icon={Calendar} color="bg-blue-500" />
+              <StatCard title="Leave Balance" value={`${calculateLeaveBalance()} Days`} icon={Calendar} color="bg-blue-500" />
               
               {/* Upcoming Holidays Card */}
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -350,8 +372,8 @@ const StatCard = ({ title, value, icon: Icon, color }: any) => {
         <p className="text-sm font-medium text-slate-500">{title}</p>
         <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
       </div>
-      <div className={`p-4 rounded-xl ${color} bg-opacity-10`}>
-        <Icon size={24} className={color.replace('bg-', 'text-')} />
+      <div className={`p-5 rounded-2xl ${color}/10`}>
+        <Icon size={32} className={color.replace('bg-', 'text-')} strokeWidth={2.5} />
       </div>
     </div>
   );

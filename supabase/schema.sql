@@ -94,6 +94,7 @@ CREATE TABLE leaves (
   end_date DATE,
   reason TEXT,
   status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
+  session TEXT DEFAULT 'FULL_DAY' CHECK (session IN ('FULL_DAY', 'FIRST_HALF', 'SECOND_HALF')),
   requested_on DATE DEFAULT CURRENT_DATE,
   reviewed_on DATE,
   CONSTRAINT leaves_pkey PRIMARY KEY (id),

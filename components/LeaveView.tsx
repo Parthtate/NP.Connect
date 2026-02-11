@@ -14,18 +14,35 @@ interface LeaveViewProps {
 
 const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentEmployeeId, onApplyLeave, onUpdateStatus }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLeaveType, setSelectedLeaveType] = useState<string>('');
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedLeaveType('');
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const type = formData.get('leaveType') as string;
+    const session = formData.get('session') as 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF' || 'FULL_DAY';
+    
+    // Auto-set end date if half-day
+    let endDate = formData.get('endDate') as string;
+    const startDate = formData.get('startDate') as string;
+    if (session !== 'FULL_DAY') {
+        endDate = startDate;
+    }
+
     onApplyLeave({
-      employeeId: currentEmployeeId!, // Should be safe for employees
-      type: formData.get('leaveType') as string,
-      startDate: formData.get('startDate') as string,
-      endDate: formData.get('endDate') as string,
+      employeeId: currentEmployeeId!, 
+      type,
+      startDate,
+      endDate,
       reason: formData.get('reason') as string,
+      session
     });
-    setIsModalOpen(false);
+    closeModal();
   };
 
   // Filter leaves based on role
@@ -115,8 +132,17 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentE
                       <div className="text-xs text-slate-500">{leave.employeeId}</div>
                     </td>
                   )}
-                  <td className="p-4"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">{leave.type}</span></td>
-                  <td className="p-4 text-sm text-slate-600">{leave.startDate} to {leave.endDate}</td>
+                  <td className="p-4">
+                    <div className="flex flex-col">
+                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium w-fit mb-1">{leave.type}</span>
+                        {leave.session && leave.session !== 'FULL_DAY' && (
+                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
+                                {leave.session.replace('_', ' ')}
+                            </span>
+                        )}
+                    </div>
+                  </td>
+                  <td className="p-4 text-sm text-slate-600">{leave.startDate} {leave.endDate !== leave.startDate ? `to ${leave.endDate}` : ''}</td>
                   <td className="p-4 text-sm text-slate-600">{leave.reason}</td>
                   <td className="p-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
@@ -147,17 +173,38 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentE
       </div>
 
       {/* Apply Modal - High Contrast UI */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Apply for Leave">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title="Apply for Leave">
          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Leave Type *</label>
-              <select name="leaveType" required className="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select 
+                  name="leaveType" 
+                  required 
+                  className="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setSelectedLeaveType(e.target.value)}
+              >
                 <option value="">Select Type</option>
                 <option value="CL">Casual Leave (CL)</option>
                 <option value="SL">Sick Leave (SL)</option>
                 <option value="PL">Privilege Leave (PL)</option>
+                <option value="HALF_DAY">Half Day</option>
               </select>
             </div>
+
+            {/* Session Selection for Half Day */}
+            {selectedLeaveType === 'HALF_DAY' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Session *</label>
+                  <select name="session" required className="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="FIRST_HALF">First Half (Late In allowed till 2:15 PM)</option>
+                    <option value="SECOND_HALF">Second Half (Early Out allowed from 2:00 PM)</option>
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">
+                      First Half: Work starts at 2:00 PM. <br/>
+                      Second Half: Work ends at 2:00 PM.
+                  </p>
+                </div>
+            )}
             <div className="grid grid-cols-2 gap-5">
                <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Start Date *</label>
@@ -179,7 +226,7 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentE
               ></textarea>
             </div>
             <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+              <button type="button" onClick={closeModal} className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
               <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Submit Application</button>
             </div>
          </form>

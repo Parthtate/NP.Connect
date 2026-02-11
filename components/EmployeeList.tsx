@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Employee } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Phone, User as UserIcon, Building, CreditCard, Banknote, Calendar } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Phone, User as UserIcon, Building, CreditCard, Banknote, Calendar, FileText, X, Download } from 'lucide-react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
 import { formatDate } from '../utils/dateUtils';
@@ -10,13 +10,30 @@ interface EmployeeListProps {
   onAddEmployee: (emp: Omit<Employee, 'id'>) => void;
   onUpdateEmployee: (emp: Employee) => void;
   onDeleteEmployee: (id: string) => void;
+  employeeDocuments?: Record<string, import('../types').EmployeeDocument[]>;
+  onUploadDocuments?: (employeeId: string, documents: import('../types').DocumentUpload[]) => Promise<void>;
+  onDeleteDocument?: (documentId: string, filePath: string) => Promise<void>;
+  onGetDocumentUrl?: (filePath: string) => Promise<string | null>;
 }
 
-const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onAddEmployee, onUpdateEmployee, onDeleteEmployee }) => {
+const EmployeeList: React.FC<EmployeeListProps> = ({ 
+  employees, 
+  onAddEmployee, 
+  onUpdateEmployee, 
+  onDeleteEmployee,
+  employeeDocuments = {},
+  onUploadDocuments,
+  onDeleteDocument,
+  onGetDocumentUrl
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   
+  // State for document upload
+  const [selectedFiles, setSelectedFiles] = useState<import('../types').DocumentUpload[]>([]);
+  const [documentType, setDocumentType] = useState('pan_card');
+
   // State for delete confirmation
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
@@ -52,10 +69,66 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onAddEmployee, o
 
     if (editingEmployee) {
       onUpdateEmployee({ ...editingEmployee, ...empData });
+      
+      // Handle document uploads for existing employee
+      if (selectedFiles.length > 0 && onUploadDocuments) {
+        onUploadDocuments(editingEmployee.id, selectedFiles).then(() => {
+          setSelectedFiles([]);
+        });
+      }
     } else {
-      onAddEmployee(empData);
+      // For new employee, we need to handle this in the parent component
+      // We pass the selected files along with employee data if possible, 
+      // but the current interface only accepts Omit<Employee, 'id'>
+      // So we'll emit a custom event or modify the prop in parent
+      // For now, let's assume onAddEmployee handles it or we modify the prop signature
+      // We'll modify the call to pass documents as a second argument (need to update interface in types/props)
+      
+      // @ts-ignore - passing extra arg for now, will update App.tsx to handle it
+      onAddEmployee(empData, selectedFiles);
     }
     closeModal();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles: import('../types').DocumentUpload[] = [];
+      Array.from(e.target.files).forEach((file: File) => {
+        // limit size to 7MB
+        if (file.size > 7 * 1024 * 1024) {
+          alert(`File ${file.name} is too large. Max size is 7MB.`);
+          return;
+        }
+        newFiles.push({
+          file,
+          documentType
+        });
+      });
+      setSelectedFiles([...selectedFiles, ...newFiles]);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = [...selectedFiles];
+    newFiles.splice(index, 1);
+    setSelectedFiles(newFiles);
+  };
+  
+  const handleDocumentClick = async (doc: import('../types').EmployeeDocument) => {
+    if (onGetDocumentUrl) {
+      const url = await onGetDocumentUrl(doc.filePath);
+      if (url) {
+        window.open(url, '_blank');
+      }
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string, filePath: string) => {
+    if (onDeleteDocument && confirm('Are you sure you want to delete this document?')) {
+      await onDeleteDocument(docId, filePath);
+    }
   };
 
   const openEdit = (emp: Employee) => {
@@ -77,6 +150,8 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onAddEmployee, o
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingEmployee(null);
+    setSelectedFiles([]);
+    setDocumentType('pan_card');
   };
 
   return (

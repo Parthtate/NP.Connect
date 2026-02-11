@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, UserRole, ViewState, Employee, AttendanceRecord, LeaveRequest, PayrollRecord, CompanySettings, Holiday, Announcement } from './types';
+import { User, UserRole, ViewState, Employee, AttendanceRecord, LeaveRequest, PayrollRecord, CompanySettings, Holiday, Announcement, EmployeeDocument, DocumentUpload } from './types';
 import { APP_NAME } from './constants';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<CompanySettings>({ defaultWorkingDays: 26 });
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [employeeDocuments, setEmployeeDocuments] = useState<Record<string, EmployeeDocument[]>>({});
 
   // --- INITIALIZATION ---
 
@@ -69,7 +70,9 @@ const App: React.FC = () => {
       fetchPayroll();
       fetchHolidays();
       fetchSettings();
+      fetchSettings();
       fetchAnnouncements();
+      fetchEmployeeDocuments();
     }
   }, [currentUser]);
 
@@ -190,7 +193,8 @@ const App: React.FC = () => {
         reason: l.reason,
         status: l.status,
         requestedOn: l.requested_on,
-        reviewedOn: l.reviewed_on
+        reviewedOn: l.reviewed_on,
+        session: l.session || 'FULL_DAY'
       }));
       setLeaves(mapped);
     }
@@ -239,6 +243,106 @@ const App: React.FC = () => {
     if (data) setAnnouncements(data);
   };
 
+  const fetchEmployeeDocuments = async (employeeId?: string) => {
+    let query = supabase.from('employee_documents').select('*');
+    if (employeeId) query = query.eq('employee_id', employeeId);
+    
+    const { data } = await query;
+    if (data) {
+      const docsMap: Record<string, EmployeeDocument[]> = {};
+      if (employeeId) {
+        // If fetching for specific employee, keep other employees' docs
+        Object.assign(docsMap, employeeDocuments);
+      }
+      
+      data.forEach((doc: any) => {
+        if (!docsMap[doc.employee_id]) {
+          docsMap[doc.employee_id] = [];
+        }
+        // Check if doc already exists to avoid duplicates if merging
+        if (!docsMap[doc.employee_id].find(d => d.id === doc.id)) {
+          docsMap[doc.employee_id].push({
+            id: doc.id,
+            employeeId: doc.employee_id,
+            documentType: doc.document_type,
+            fileName: doc.file_name,
+            filePath: doc.file_path,
+            fileSize: doc.file_size,
+            mimeType: doc.mime_type,
+            uploadedBy: doc.uploaded_by,
+            uploadedAt: doc.uploaded_at
+          });
+        }
+      });
+      setEmployeeDocuments(prev => ({...prev, ...docsMap}));
+    }
+  };
+
+  const uploadEmployeeDocuments = async (
+    employeeId: string, 
+    documents: DocumentUpload[]
+  ) => {
+    for (const doc of documents) {
+      const fileExt = doc.file.name.split('.').pop();
+      const fileName = `${doc.documentType}_${Date.now()}.${fileExt}`;
+      const filePath = `${employeeId}/${fileName}`;
+      
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('employee-documents')
+        .upload(filePath, doc.file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        console.error('Error uploading document:', uploadError);
+        continue;
+      }
+      
+      // Save metadata to database
+      await supabase.from('employee_documents').insert({
+        employee_id: employeeId,
+        document_type: doc.documentType,
+        file_name: doc.file.name,
+        file_path: filePath,
+        file_size: doc.file.size,
+        mime_type: doc.file.type,
+        uploaded_by: currentUser?.id
+      });
+    }
+    
+    fetchEmployeeDocuments(employeeId);
+  };
+
+  const deleteEmployeeDocument = async (documentId: string, filePath: string) => {
+    // Delete from storage
+    const { error: storageError } = await supabase.storage.from('employee-documents').remove([filePath]);
+    
+    if (storageError) {
+       console.error('Error deleting file from storage:', storageError);
+    }
+    
+    // Delete from database
+    const { error: dbError } = await supabase.from('employee_documents').delete().eq('id', documentId);
+
+    if (dbError) {
+      console.error('Error deleting document metadata:', dbError);
+    }
+    
+    // Refresh documents
+    // Extract employeeId from filePath (it's the first part) or just refetch all
+    fetchEmployeeDocuments();
+  };
+
+  const getDocumentSignedUrl = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from('employee-documents')
+      .createSignedUrl(filePath, 86400); // 24 hours expiry
+    
+    return data?.signedUrl || null;
+  };
+
   // --- ACTIONS (SUPABASE PERSISTENCE) ---
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -282,7 +386,7 @@ const App: React.FC = () => {
     setCurrentUser(null);
   };
 
-  const addEmployee = async (data: Omit<Employee, 'id'>) => {
+  const addEmployee = async (data: Omit<Employee, 'id'>, documents?: DocumentUpload[]) => {
     const newId = 'EMP' + Date.now().toString().slice(-5);
     
     const dbPayload = {
@@ -307,6 +411,11 @@ const App: React.FC = () => {
     if (error) {
       console.error('Error adding employee:', error.message);
       return;
+    }
+
+    // Upload documents if provided
+    if (documents && documents.length > 0) {
+      await uploadEmployeeDocuments(newId, documents);
     }
 
     // Employee created successfully, now create auth user and send magic link
@@ -411,15 +520,64 @@ const App: React.FC = () => {
     else console.error('Check-in failed:', error.message);
   };
 
+
+
+  const getStatusFromDuration = (checkInStr: string, checkOutStr: string): 'Present' | 'Absent' | 'Half Day' => {
+      const [inH, inM] = checkInStr.split(':').map(Number);
+      const [outH, outM] = checkOutStr.split(':').map(Number);
+      
+      const start = inH * 60 + inM;
+      const end = outH * 60 + outM;
+      const durationMinutes = end - start;
+      const durationHours = durationMinutes / 60;
+
+      if (durationHours < 4) return 'Absent';
+      if (durationHours >= 4 && durationHours < 6) return 'Half Day';
+      return 'Present';
+  };
+
   const employeeCheckOut = async () => {
     if (!currentUser?.employeeId) return;
     const today = new Date().toISOString().split('T')[0];
     const timeNow = new Date().toLocaleTimeString('en-US', {hour12: false});
 
     // We update the existing record
+    // First, we need to fetch the check-in time to calculate duration
+    const { data: currentRecord } = await supabase
+        .from('attendance')
+        .select('check_in')
+        .eq('employee_id', currentUser.employeeId)
+        .eq('date', today)
+        .single();
+    
+    let status = 'Present'; // Default fallback
+    
+    if (currentRecord && currentRecord.check_in) {
+        status = getStatusFromDuration(currentRecord.check_in, timeNow);
+    }
+    
+    // Check if there is an approved Half Day leave for today
+    // If so, we might want to ensure we don't mark as Absent if they met the half-day criteria
+    const approvedHalfDay = leaves.find(l => 
+        l.employeeId === currentUser.employeeId && 
+        l.startDate === today && 
+        l.status === 'Approved' && 
+        l.type === 'HALF_DAY'
+    );
+
+    if (approvedHalfDay) {
+        // If they have an approved half day, and they worked enough for the other half (e.g. > 2-3 hours?), 
+        // strictly speaking the logic above handles it. 
+        // If they work 4 hours, they get 'Half Day' status, which matches the leave.
+        // If they work < 4 hours, they get 'Absent', which is correct (they took half day but didn't work the other half).
+        // So the duration logic actually holds up well.
+        // We just need to make sure 'Half Day' status is what we want. 
+        // Yes, if status is 'Half Day', it means they were present for half the day.
+    }
+
     const { error } = await supabase
       .from('attendance')
-      .update({ check_out: timeNow })
+      .update({ check_out: timeNow, status: status })
       .eq('employee_id', currentUser.employeeId)
       .eq('date', today);
 
@@ -452,6 +610,7 @@ const App: React.FC = () => {
       end_date: leaveData.endDate,
       reason: leaveData.reason,
       status: 'Pending',
+      session: leaveData.session || 'FULL_DAY',
       requested_on: new Date().toISOString().split('T')[0]
     };
 
@@ -555,7 +714,7 @@ const App: React.FC = () => {
   // Login Screen
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col justify-center items-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-slate-900 to-slate-800 flex flex-col justify-center items-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden">
           <div className="bg-white p-8 text-center">
             {/* Company Logo */}
@@ -718,6 +877,10 @@ const App: React.FC = () => {
                   onAddEmployee={addEmployee}
                   onUpdateEmployee={updateEmployee}
                   onDeleteEmployee={deleteEmployee}
+                  employeeDocuments={employeeDocuments}
+                  onUploadDocuments={uploadEmployeeDocuments}
+                  onDeleteDocument={deleteEmployeeDocument}
+                  onGetDocumentUrl={getDocumentSignedUrl}
               />;
           case ViewState.ATTENDANCE: // HR View
           case ViewState.MY_ATTENDANCE: // Employee View

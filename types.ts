@@ -72,6 +72,7 @@ export interface LeaveRequest {
   endDate: string;
   reason: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  session: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF';
   requestedOn: string;
   reviewedOn?: string;
 }
@@ -118,4 +119,21 @@ export interface Announcement {
   title: string;
   content: string;
   date: string;
+}
+
+export interface EmployeeDocument {
+  id: string;
+  employeeId: string;
+  documentType: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface DocumentUpload {
+  file: File;
+  documentType: string;
 }

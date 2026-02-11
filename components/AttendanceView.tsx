@@ -174,7 +174,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
               return (
                 <div key={emp.id} className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 hover:bg-slate-50">
                   <div className="flex items-center space-x-3 w-full sm:w-auto">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    <div className="w-10 h-10 bg-linear-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                         {emp.fullName.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>

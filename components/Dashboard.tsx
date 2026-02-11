@@ -81,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
            {/* Live Clock & Welcome */}
-           <div className="lg:col-span-3 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-lg">
+           <div className="lg:col-span-3 bg-linear-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-lg">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Welcome back, {user.name}</h1>
                 <p className="text-slate-300">Have a productive day!</p>
@@ -103,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button 
                     onClick={onCheckIn}
-                    className="flex flex-col items-center justify-center p-8 rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
+                    className="flex flex-col items-center justify-center p-8 rounded-xl bg-linear-to-br from-green-500 to-green-600 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
                   >
                     <LogIn size={48} className="mb-4" />
                     <span className="text-xl font-bold">Check In</span>
@@ -111,7 +111,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                   </button>
                   <button 
                     onClick={onMarkHalfDay}
-                    className="flex flex-col items-center justify-center p-8 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
+                    className="flex flex-col items-center justify-center p-8 rounded-xl bg-linear-to-br from-orange-400 to-orange-500 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
                   >
                     <Hourglass size={48} className="mb-4" />
                     <span className="text-xl font-bold">Half Day</span>
@@ -130,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                    {!myTodayAtt.checkOut ? (
                      <button 
                         onClick={onCheckOut}
-                        className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                        className="w-full py-4 bg-linear-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
                      >
                        <LogOut size={24} /> Check Out
                      </button>

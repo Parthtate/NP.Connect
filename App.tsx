@@ -70,7 +70,6 @@ const App: React.FC = () => {
       fetchPayroll();
       fetchHolidays();
       fetchSettings();
-      fetchSettings();
       fetchAnnouncements();
       fetchEmployeeDocuments();
     }
@@ -870,6 +869,8 @@ const App: React.FC = () => {
                   onViewAllEmployees={() => setCurrentView(ViewState.EMPLOYEES)}
                   onAddAnnouncement={addAnnouncement}
                   onDeleteAnnouncement={deleteAnnouncement}
+                  employeeDocuments={employeeDocuments}
+                  onGetDocumentUrl={getDocumentSignedUrl}
               />;
           case ViewState.EMPLOYEES:
               return <EmployeeList 

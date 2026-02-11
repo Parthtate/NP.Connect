@@ -7,7 +7,7 @@ import { formatDate } from '../utils/dateUtils';
 
 interface EmployeeListProps {
   employees: Employee[];
-  onAddEmployee: (emp: Omit<Employee, 'id'>) => void;
+  onAddEmployee: (emp: Omit<Employee, 'id'>, documents?: import('../types').DocumentUpload[]) => void;
   onUpdateEmployee: (emp: Employee) => void;
   onDeleteEmployee: (id: string) => void;
   employeeDocuments?: Record<string, import('../types').EmployeeDocument[]>;
@@ -84,7 +84,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
       // For now, let's assume onAddEmployee handles it or we modify the prop signature
       // We'll modify the call to pass documents as a second argument (need to update interface in types/props)
       
-      // @ts-ignore - passing extra arg for now, will update App.tsx to handle it
       onAddEmployee(empData, selectedFiles);
     }
     closeModal();
@@ -314,10 +313,76 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Date of Joining *</label>
                 <input name="dateOfJoining" type="date" defaultValue={editingEmployee?.dateOfJoining} required className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-slate-900 text-sm" />
               </div>
+              </div>
+            </div>
+
+
+          {/* Section 3: Documents (New) */}
+          <div>
+            <h4 className="flex items-center text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">
+              <FileText size={16} className="mr-2 text-slate-600" /> Documents
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Upload Document</label>
+                  <div className="flex gap-2 mb-2">
+                    <select 
+                      className="p-2 border border-slate-300 rounded text-sm bg-white"
+                      value={documentType}
+                      onChange={(e) => setDocumentType(e.target.value)}
+                    >
+                      <option value="pan_card">PAN Card</option>
+                      <option value="aadhaar_card">Aadhaar Card</option>
+                      <option value="payslip">Payslip</option>
+                      <option value="offer_letter">Offer Letter</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <input 
+                      type="file" 
+                      multiple
+                      onChange={handleFileSelect}
+                      className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                  </div>
+                  
+                  {/* Selected Files List */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      <p className="text-xs font-bold text-slate-500">Files to Upload:</p>
+                      {selectedFiles.map((file, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100 text-sm">
+                          <span className="truncate max-w-[200px]">{file.file.name} ({file.documentType})</span>
+                          <button type="button" onClick={() => removeFile(idx)} className="text-red-500"><X size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+               </div>
+
+               {/* Existing Documents List (Edit Mode) */}
+               {editingEmployee && employeeDocuments[editingEmployee.id]?.length > 0 && (
+                 <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Existing Documents</label>
+                    <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                      {employeeDocuments[editingEmployee.id].map(doc => (
+                        <div key={doc.id} className="flex justify-between items-center p-2 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50">
+                           <div className="flex items-center gap-2 overflow-hidden cursor-pointer" onClick={() => handleDocumentClick(doc)}>
+                             <FileText size={14} className="text-blue-500 shrink-0" />
+                             <span className="truncate text-blue-600 hover:underline">{doc.fileName}</span>
+                           </div>
+                           <button type="button" onClick={() => handleDeleteDocument(doc.id, doc.filePath)} className="text-slate-400 hover:text-red-500">
+                             <Trash2 size={14} />
+                           </button>
+                        </div>
+                      ))}
+                    </div>
+                 </div>
+               )}
             </div>
           </div>
 
-          {/* Section 3: Financial Info */}
+          {/* Section 4: Financial Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <h4 className="flex items-center text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">

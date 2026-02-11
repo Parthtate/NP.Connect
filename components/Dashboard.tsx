@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { User, UserRole, Employee, AttendanceRecord, LeaveRequest, Holiday } from '../types';
-import { Calendar, Clock, LogIn, LogOut, CheckCircle, Hourglass, User as UserIcon, TrendingUp, Award, Users, DollarSign, AlertCircle, Gift, ArrowRight, Trash2, Plus } from 'lucide-react';
+import { Calendar, Clock, LogIn, LogOut, CheckCircle, Hourglass, User as UserIcon, TrendingUp, Award, Users, DollarSign, AlertCircle, Gift, ArrowRight, Trash2, Plus, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatDateLong } from '../utils/dateUtils';
 
@@ -22,11 +22,13 @@ interface DashboardProps {
   onCheckOut: () => void;
   onMarkHalfDay: () => void;
   onViewAllEmployees?: () => void;
-  onAddAnnouncement?: (announcement: Omit<Announcement, 'id'>) => void; // New Prop
-  onDeleteAnnouncement?: (id: string) => void; // New Prop
+  onAddAnnouncement?: (announcement: Omit<Announcement, 'id'>) => void;
+  onDeleteAnnouncement?: (id: string) => void;
+  employeeDocuments?: Record<string, import('../types').EmployeeDocument[]>; // New Prop
+  onGetDocumentUrl?: (filePath: string) => Promise<string | null>; // New Prop
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leaves, holidays, announcements = [], onCheckIn, onCheckOut, onMarkHalfDay, onViewAllEmployees, onAddAnnouncement, onDeleteAnnouncement }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leaves, holidays, announcements = [], onCheckIn, onCheckOut, onMarkHalfDay, onViewAllEmployees, onAddAnnouncement, onDeleteAnnouncement, employeeDocuments = {}, onGetDocumentUrl }) => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -210,6 +212,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                     </div>
                   ))}
                   {announcements.length === 0 && <p className="text-slate-500 text-sm text-center">No announcements</p>}
+               </div>
+               </div>
+
+
+            {/* My Documents Section */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <FileText size={20} className="text-blue-500"/> My Documents
+               </h3>
+               <div className="space-y-3">
+                  {myEmployeeId && employeeDocuments[myEmployeeId]?.map(doc => (
+                    <div key={doc.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                       <div className="flex items-center gap-3 overflow-hidden">
+                          <FileText size={16} className="text-slate-400 shrink-0" />
+                          <div>
+                            <p className="font-medium text-slate-900 text-sm truncate max-w-[150px]">{doc.fileName}</p>
+                            <p className="text-[10px] text-slate-500">{doc.documentType.replace('_', ' ').toUpperCase()}</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={async () => {
+                           if (onGetDocumentUrl) {
+                             const url = await onGetDocumentUrl(doc.filePath);
+                             if (url) window.open(url, '_blank');
+                           }
+                         }}
+                         className="text-blue-600 hover:text-blue-800 text-xs font-semibold"
+                       >
+                         View
+                       </button>
+                    </div>
+                  ))}
+                  {(!myEmployeeId || !employeeDocuments[myEmployeeId] || employeeDocuments[myEmployeeId].length === 0) && (
+                    <p className="text-slate-500 text-sm text-center">No documents uploaded</p>
+                  )}
                </div>
             </div>
       </div>

@@ -29,6 +29,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [managingDocumentsFor, setManagingDocumentsFor] = useState<Employee | null>(null);
   
   // State for document upload
   const [selectedFiles, setSelectedFiles] = useState<import('../types').DocumentUpload[]>([]);
@@ -233,6 +234,16 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
                     </span>
                   </td>
                   <td className="p-4 text-right space-x-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setManagingDocumentsFor(emp);
+                      }}
+                      className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+                      title="Manage Documents"
+                    >
+                      <FileText size={18} />
+                    </button>
                     <button 
                       onClick={() => openEdit(emp)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -487,7 +498,159 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         onCancel={() => setEmployeeToDelete(null)}
         variant="danger"
       />
+      <DocumentManagerModal 
+        employee={managingDocumentsFor} 
+        isOpen={!!managingDocumentsFor} 
+        onClose={() => setManagingDocumentsFor(null)}
+        documents={managingDocumentsFor ? (employeeDocuments[managingDocumentsFor.id] || []) : []}
+        onUpload={onUploadDocuments}
+        onDelete={onDeleteDocument}
+        onView={onGetDocumentUrl}
+        onDeleteDocument={onDeleteDocument}
+      />
     </div>
+  );
+};
+
+interface DocumentManagerModalProps {
+  employee: Employee | null;
+  isOpen: boolean;
+  onClose: () => void;
+  documents: import('../types').EmployeeDocument[];
+  onUpload?: (employeeId: string, documents: import('../types').DocumentUpload[]) => Promise<void>;
+  onDelete?: (documentId: string, filePath: string) => Promise<void>;
+  onView?: (filePath: string) => Promise<string | null>;
+  onDeleteDocument?: (documentId: string, filePath: string) => Promise<void>;
+}
+
+const DocumentManagerModal: React.FC<DocumentManagerModalProps> = ({ employee, isOpen, onClose, documents, onUpload, onDelete, onView }) => {
+  const [selectedFiles, setSelectedFiles] = useState<import('../types').DocumentUpload[]>([]);
+  const [documentType, setDocumentType] = useState('pan_card');
+  const [isUploading, setIsUploading] = useState(false);
+
+  if (!employee) return null;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles: import('../types').DocumentUpload[] = [];
+      Array.from(e.target.files).forEach((file: File) => {
+        if (file.size > 7 * 1024 * 1024) {
+          alert(`File ${file.name} is too large. Max size is 7MB.`);
+          return;
+        }
+        newFiles.push({ file, documentType });
+      });
+      setSelectedFiles([...selectedFiles, ...newFiles]);
+      e.target.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = [...selectedFiles];
+    newFiles.splice(index, 1);
+    setSelectedFiles(newFiles);
+  };
+
+  const handleUpload = async () => {
+    if (onUpload && selectedFiles.length > 0) {
+      setIsUploading(true);
+      await onUpload(employee.id, selectedFiles);
+      setIsUploading(false);
+      setSelectedFiles([]);
+    }
+  };
+
+  const handleDelete = async (doc: import('../types').EmployeeDocument) => {
+    if (onDelete && confirm('Are you sure you want to delete this document?')) {
+      await onDelete(doc.id, doc.filePath);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Documents - ${employee.fullName}`} maxWidth="max-w-2xl">
+      <div className="space-y-6">
+        {/* Upload Section */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+           <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 flex items-center gap-2">
+             <Plus size={16} className="text-blue-600" /> Upload New Document
+           </h4>
+           <div className="flex gap-2 mb-3">
+             <select 
+               className="p-2 border border-slate-300 rounded text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+               value={documentType}
+               onChange={(e) => setDocumentType(e.target.value)}
+             >
+               <option value="pan_card">PAN Card</option>
+               <option value="aadhaar_card">Aadhaar Card</option>
+               <option value="payslip">Payslip</option>
+               <option value="offer_letter">Offer Letter</option>
+               <option value="contract">Contract</option>
+               <option value="resume">Resume</option>
+               <option value="other">Other</option>
+             </select>
+             <input 
+               type="file" 
+               multiple
+               onChange={handleFileSelect}
+               className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-white file:text-blue-700 hover:file:bg-blue-50 border border-slate-200 rounded cursor-pointer"
+             />
+           </div>
+           
+           {selectedFiles.length > 0 && (
+             <div className="space-y-2">
+               {selectedFiles.map((file, idx) => (
+                 <div key={idx} className="flex justify-between items-center p-2 bg-white rounded border border-slate-200 text-sm">
+                   <span className="truncate">{file.file.name} <span className="text-slate-400 text-xs">({file.documentType})</span></span>
+                   <button onClick={() => removeFile(idx)} className="text-red-400 hover:text-red-600"><X size={14} /></button>
+                 </div>
+               ))}
+               <button 
+                 onClick={handleUpload}
+                 disabled={isUploading}
+                 className="w-full mt-2 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex justify-center items-center gap-2"
+               >
+                 {isUploading ? 'Uploading...' : 'Upload Files'}
+               </button>
+             </div>
+           )}
+        </div>
+
+        {/* List Section */}
+        <div>
+           <h4 className="text-sm font-bold text-slate-700 uppercase mb-3 flex items-center gap-2">
+             <FileText size={16} className="text-slate-600" /> Existing Documents ({documents.length})
+           </h4>
+           <div className="space-y-2 max-h-[300px] overflow-y-auto">
+             {documents.map(doc => (
+               <div key={doc.id} className="flex justify-between items-center p-3 bg-white border border-slate-200 rounded-lg hover:shadow-sm transition-all group">
+                  <div className="flex items-center gap-3 overflow-hidden cursor-pointer" onClick={async () => {
+                    if (onView) {
+                      const url = await onView(doc.filePath);
+                      if (url) window.open(url, '_blank');
+                    }
+                  }}>
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100 transition-colors">
+                      <FileText size={18} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900 text-sm truncate">{doc.fileName}</p>
+                      <p className="text-xs text-slate-500 capitalize">{doc.documentType.replace(/_/g, ' ')} • {(doc.fileSize / 1024).toFixed(1)} KB</p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleDelete(doc)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                    <Trash2 size={16} />
+                  </button>
+               </div>
+             ))}
+             {documents.length === 0 && (
+               <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                 No documents found for this employee
+               </div>
+             )}
+           </div>
+        </div>
+      </div>
+    </Modal>
   );
 };
 

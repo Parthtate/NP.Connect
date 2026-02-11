@@ -88,43 +88,18 @@ const App: React.FC = () => {
       if (error) throw error;
 
       if (data) {
-        let employeeId = data.employee_id;
+
         
 
         
-        // Auto-link employee by email if not already linked
-        if (!employeeId && data.email) {
-          try {
-            // Try to find employee record with matching email
-            const { data: empData, error: empError } = await supabase
-              .from('employees')
-              .select('id')
-              .eq('email', data.email)
-              .single();
-            
-            // Only update if we found a matching employee
-            if (empData?.id && !empError) {
-              // Update profile with employee_id
-              await supabase
-                .from('profiles')
-                .update({ employee_id: empData.id })
-                .eq('id', userId);
-              
-              employeeId = empData.id;
-              console.log('Auto-linked employee:', employeeId);
-            }
-          } catch (empError) {
-            // Silently fail - employee linking is optional
-            console.warn('Could not auto-link employee:', empError);
-          }
-        }
+
         
         setCurrentUser({
           id: data.id,
           name: data.full_name || data.email,
           email: data.email,
           role: data.role as UserRole,
-          employeeId: employeeId
+          employeeId: data.employee_id
         });
       }
     } catch (error) {

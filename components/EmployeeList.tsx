@@ -270,7 +270,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         isOpen={isModalOpen} 
         onClose={closeModal} 
         title={editingEmployee ? "Edit Employee Profile" : "Create New Employee"}
-        maxWidth="max-w-4xl"
+        maxWidth="max-w-3xl"
       >
         <form onSubmit={handleSubmit} className="space-y-8">
           
@@ -282,11 +282,36 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-1">
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Full Name *</label>
-                <input name="fullName" defaultValue={editingEmployee?.fullName} required className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 text-sm placeholder-slate-400" placeholder="e.g. John Doe" />
+                <input 
+                  name="fullName" 
+                  defaultValue={editingEmployee?.fullName} 
+                  required 
+                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 text-sm placeholder-slate-400" 
+                  placeholder="e.g. John Doe" 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!/^[a-zA-Z\s]*$/.test(val)) {
+                      e.target.value = val.replace(/[^a-zA-Z\s]/g, '');
+                    }
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Mobile *</label>
-                <input name="mobile" defaultValue={editingEmployee?.mobile} required className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 text-sm placeholder-slate-400" placeholder="+1 234 567 890" />
+                <input 
+                  name="mobile" 
+                  defaultValue={editingEmployee?.mobile} 
+                  required 
+                  maxLength={10}
+                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 text-sm placeholder-slate-400" 
+                  placeholder="10-digit number" 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!/^\d*$/.test(val)) {
+                      e.target.value = val.replace(/\D/g, '');
+                    }
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Email *</label>

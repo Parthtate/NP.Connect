@@ -188,7 +188,7 @@ const PayrollView: React.FC<PayrollViewProps> = ({ role, employees, payroll, cur
       )}
 
       {/* Processing Wizard Modal */}
-      <Modal isOpen={isProcessingModalOpen} onClose={() => setIsProcessingModalOpen(false)} title="Run Payroll Wizard" maxWidth="max-w-5xl">
+      <Modal isOpen={isProcessingModalOpen} onClose={() => setIsProcessingModalOpen(false)} title="Run Payroll Wizard" maxWidth="max-w-4xl">
          <div className="space-y-6">
             <div className="bg-slate-50 p-5 rounded-lg border border-slate-200">
                <h4 className="text-sm font-bold text-slate-700 uppercase mb-4 flex items-center gap-2">

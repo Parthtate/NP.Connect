@@ -14,7 +14,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className={`bg-white rounded-2xl shadow-xl w-full ${maxWidth} animate-in fade-in zoom-in-95 duration-200`}>
+      <div className={`bg-white rounded-2xl shadow-xl w-full ${maxWidth} animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h3 className="text-xl font-bold text-slate-800">{title}</h3>
           <button 

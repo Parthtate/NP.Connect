@@ -138,7 +138,7 @@ const Layout: React.FC<LayoutProps> = ({ user, currentView, onChangeView, onLogo
 
         <div className="absolute bottom-0 w-full p-4 border-t border-slate-800">
           <div className="flex items-center space-x-3 mb-4 px-2">
-            <div className="w-10 h-10 bg-linear-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                {user.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">

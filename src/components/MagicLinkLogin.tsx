@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 
 export const MagicLinkLogin: React.FC = () => {
   const [email, setEmail] = useState('');

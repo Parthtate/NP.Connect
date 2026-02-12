@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CalendarCheck, Umbrella, DollarSign, Users, ChevronLeft, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { Employee, AttendanceRecord, LeaveRequest, PayrollRecord } from '../types';
+import { Employee, AttendanceRecord, LeaveRequest, PayrollRecord } from '../../types';
 
 interface ReportsProps {
   employees: Employee[];

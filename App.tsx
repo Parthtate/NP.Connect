@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, ViewState, Employee, AttendanceRecord, LeaveRequest, PayrollRecord, CompanySettings, Holiday, Announcement, EmployeeDocument, DocumentUpload } from './types';
 import { APP_NAME } from './constants';
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import EmployeeList from './components/EmployeeList';
-import AttendanceView from './components/AttendanceView';
-import LeaveView from './components/LeaveView';
-import PayrollView from './components/PayrollView';
-import SettingsView from './components/SettingsView';
-import Reports from './components/Reports';
+import Layout from './src/components/Layout';
+import Dashboard from './src/components/Dashboard';
+import EmployeeList from './src/components/EmployeeList';
+import AttendanceView from './src/components/AttendanceView';
+import LeaveView from './src/components/LeaveView';
+import PayrollView from './src/components/PayrollView';
+import SettingsView from './src/components/SettingsView';
+import Reports from './src/components/Reports';
 import { ShieldCheck, User as UserIcon, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase, supabaseUrl } from './lib/supabaseClient';
 

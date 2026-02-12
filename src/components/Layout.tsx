@@ -1,6 +1,6 @@
 import React from 'react';
-import { User, UserRole, ViewState, NavItem } from '../types';
-import { APP_NAME } from '../constants';
+import { User, UserRole, ViewState, NavItem } from '../../types';
+import { APP_NAME } from '../../constants';
 import { 
   LayoutDashboard, 
   Users, 

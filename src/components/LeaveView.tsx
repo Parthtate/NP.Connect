@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LeaveRequest, UserRole, Employee } from '../types';
+import { LeaveRequest, UserRole, Employee } from '../../types';
 import { Plus, CheckCircle, Clock, XCircle, Check, X, Calendar, UserCheck } from 'lucide-react';
 import Modal from './Modal';
 

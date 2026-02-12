@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CompanySettings, Holiday } from '../types';
+import { CompanySettings, Holiday } from '../../types';
 import { Plus, Trash2, Calendar, Save, Settings } from 'lucide-react';
 
 interface SettingsViewProps {

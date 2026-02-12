@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { User, UserRole, Employee, AttendanceRecord, LeaveRequest, Holiday } from '../types';
+import { User, UserRole, Employee, AttendanceRecord, LeaveRequest, Holiday } from '../../types';
 import { Calendar, Clock, LogIn, LogOut, CheckCircle, Hourglass, User as UserIcon, TrendingUp, Award, Users, DollarSign, AlertCircle, Gift, ArrowRight, Trash2, Plus, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatDateLong } from '../utils/dateUtils';
@@ -23,7 +23,7 @@ interface DashboardProps {
   onViewAllEmployees?: () => void;
   onAddAnnouncement?: (announcement: Omit<Announcement, 'id'>) => void;
   onDeleteAnnouncement?: (id: string) => void;
-  employeeDocuments?: Record<string, import('../types').EmployeeDocument[]>; // New Prop
+  employeeDocuments?: Record<string, import('../../types').EmployeeDocument[]>; // New Prop
   onGetDocumentUrl?: (filePath: string) => Promise<string | null>; // New Prop
 }
 

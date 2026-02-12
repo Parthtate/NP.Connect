@@ -2,8 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App';
-import MagicLinkLogin from './components/MagicLinkLogin';
-import AuthCallback from './components/AuthCallback';
+import MagicLinkLogin from './src/components/MagicLinkLogin';
+import AuthCallback from './src/components/AuthCallback';
 import './index.css';
 
 const root = ReactDOM.createRoot(

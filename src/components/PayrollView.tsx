@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PayrollRecord, Employee, UserRole, CompanySettings } from '../types';
+import { PayrollRecord, Employee, UserRole, CompanySettings } from '../../types';
 import { Calculator, FileText, Download, DollarSign, Settings2, PlusCircle, MinusCircle, Loader2 } from 'lucide-react';
 import Modal from './Modal';
 import html2canvas from 'html2canvas';

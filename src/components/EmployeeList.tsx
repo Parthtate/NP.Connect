@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Employee } from '../types';
+import { Employee } from '../../types';
 import { Plus, Search, Edit2, Trash2, Mail, Phone, User as UserIcon, Building, CreditCard, Banknote, Calendar, FileText, X, Download } from 'lucide-react';
 import Modal from './Modal';
 import ConfirmDialog from './ConfirmDialog';
@@ -7,11 +7,11 @@ import { formatDate } from '../utils/dateUtils';
 
 interface EmployeeListProps {
   employees: Employee[];
-  onAddEmployee: (emp: Omit<Employee, 'id'>, documents?: import('../types').DocumentUpload[]) => void;
+  onAddEmployee: (emp: Omit<Employee, 'id'>, documents?: import('../../types').DocumentUpload[]) => void;
   onUpdateEmployee: (emp: Employee) => void;
   onDeleteEmployee: (id: string) => void;
-  employeeDocuments?: Record<string, import('../types').EmployeeDocument[]>;
-  onUploadDocuments?: (employeeId: string, documents: import('../types').DocumentUpload[]) => Promise<void>;
+  employeeDocuments?: Record<string, import('../../types').EmployeeDocument[]>;
+  onUploadDocuments?: (employeeId: string, documents: import('../../types').DocumentUpload[]) => Promise<void>;
   onDeleteDocument?: (documentId: string, filePath: string) => Promise<void>;
   onGetDocumentUrl?: (filePath: string) => Promise<string | null>;
 }
@@ -32,7 +32,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   const [managingDocumentsFor, setManagingDocumentsFor] = useState<Employee | null>(null);
   
   // State for document upload
-  const [selectedFiles, setSelectedFiles] = useState<import('../types').DocumentUpload[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<import('../../types').DocumentUpload[]>([]);
   const [documentType, setDocumentType] = useState('pan_card');
 
   // State for delete confirmation
@@ -92,7 +92,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles: import('../types').DocumentUpload[] = [];
+      const newFiles: import('../../types').DocumentUpload[] = [];
       Array.from(e.target.files).forEach((file: File) => {
         // limit size to 7MB
         if (file.size > 7 * 1024 * 1024) {
@@ -116,7 +116,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
     setSelectedFiles(newFiles);
   };
   
-  const handleDocumentClick = async (doc: import('../types').EmployeeDocument) => {
+  const handleDocumentClick = async (doc: import('../../types').EmployeeDocument) => {
     if (onGetDocumentUrl) {
       const url = await onGetDocumentUrl(doc.filePath);
       if (url) {
@@ -516,15 +516,15 @@ interface DocumentManagerModalProps {
   employee: Employee | null;
   isOpen: boolean;
   onClose: () => void;
-  documents: import('../types').EmployeeDocument[];
-  onUpload?: (employeeId: string, documents: import('../types').DocumentUpload[]) => Promise<void>;
+  documents: import('../../types').EmployeeDocument[];
+  onUpload?: (employeeId: string, documents: import('../../types').DocumentUpload[]) => Promise<void>;
   onDelete?: (documentId: string, filePath: string) => Promise<void>;
   onView?: (filePath: string) => Promise<string | null>;
   onDeleteDocument?: (documentId: string, filePath: string) => Promise<void>;
 }
 
 const DocumentManagerModal: React.FC<DocumentManagerModalProps> = ({ employee, isOpen, onClose, documents, onUpload, onDelete, onView }) => {
-  const [selectedFiles, setSelectedFiles] = useState<import('../types').DocumentUpload[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<import('../../types').DocumentUpload[]>([]);
   const [documentType, setDocumentType] = useState('pan_card');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -532,7 +532,7 @@ const DocumentManagerModal: React.FC<DocumentManagerModalProps> = ({ employee, i
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles: import('../types').DocumentUpload[] = [];
+      const newFiles: import('../../types').DocumentUpload[] = [];
       Array.from(e.target.files).forEach((file: File) => {
         if (file.size > 7 * 1024 * 1024) {
           alert(`File ${file.name} is too large. Max size is 7MB.`);
@@ -560,7 +560,7 @@ const DocumentManagerModal: React.FC<DocumentManagerModalProps> = ({ employee, i
     }
   };
 
-  const handleDelete = async (doc: import('../types').EmployeeDocument) => {
+  const handleDelete = async (doc: import('../../types').EmployeeDocument) => {
     if (onDelete && confirm('Are you sure you want to delete this document?')) {
       await onDelete(doc.id, doc.filePath);
     }

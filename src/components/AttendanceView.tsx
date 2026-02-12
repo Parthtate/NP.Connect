@@ -1,5 +1,5 @@
 import React from 'react';
-import { AttendanceRecord, Employee, UserRole } from '../types';
+import { AttendanceRecord, Employee, UserRole } from '../../types';
 import { Check, Clock, User as UserIcon, X, Download, Calendar, FileText } from 'lucide-react';
 import { formatDateForCSV } from '../utils/dateUtils';
 

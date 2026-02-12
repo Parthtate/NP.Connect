@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { PayrollRecord, Employee, UserRole, CompanySettings } from '../../types';
 import { Calculator, FileText, Download, DollarSign, Settings2, PlusCircle, MinusCircle, Loader2 } from 'lucide-react';
 import Modal from './Modal';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+
+// ... (existing imports)
+
+// ... (inside PayrollView)
+
+
 
 interface PayrollViewProps {
   role: UserRole;
@@ -290,22 +296,22 @@ const PayslipModal = ({ data, onClose }: { data: {emp: Employee, record: Payroll
 
   const handleDownloadPDF = async () => {
     const element = document.getElementById('payslip-content');
-    if (!element) return;
+    if (!element) {
+      console.error('Payslip content element not found');
+      return;
+    }
     
     setIsDownloading(true);
 
     try {
       // Small delay to let UI render if needed
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const canvas = await html2canvas(element, {
-        scale: 2, // Higher scale for better resolution
-        useCORS: true,
-        logging: false,
+      const dataUrl = await toPng(element, {
+        cacheBust: true,
         backgroundColor: '#ffffff'
       });
 
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -314,25 +320,34 @@ const PayslipModal = ({ data, onClose }: { data: {emp: Employee, record: Payroll
 
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const img = new Image();
+      img.src = dataUrl;
+      
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      const imgHeight = (img.height * imgWidth) / img.width;
       
       let heightLeft = imgHeight;
       let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      
-      // If content is longer than one page (unlikely for payslip but good practice)
+      pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
+
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(dataUrl, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`payslip_${record.month}_${emp.fullName.replace(/\s+/g, '_')}.pdf`);
+      const fileName = `payslip_${record.month}_${emp.fullName.replace(/\s+/g, '_')}.pdf`;
+      pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please check the console for details.');
     } finally {
       setIsDownloading(false);
     }

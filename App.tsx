@@ -1028,6 +1028,29 @@ const App: React.FC = () => {
                    currentEmployeeId={currentUser.employeeId}
                    settings={settings}
                    onProcessPayroll={processPayroll}
+                   onCalculateWorkingDays={(month: string) => {
+                     const [year, monthNum] = month.split('-').map(Number);
+                     const startDate = new Date(year, monthNum - 1, 1);
+                     const endDate = new Date(year, monthNum, 0);
+                     const daysInMonth = endDate.getDate();
+                     
+                     let workingDays = 0;
+                     for (let d = 1; d <= daysInMonth; d++) {
+                       const currentDate = new Date(year, monthNum - 1, d);
+                       const dayOfWeek = currentDate.getDay();
+                       const dateStr = currentDate.toISOString().split('T')[0];
+                       
+                       // Skip Sundays (0)
+                       if (dayOfWeek === 0) continue;
+                       
+                       // Skip Holidays
+                       const isHoliday = holidays.some(h => h.date === dateStr);
+                       if (isHoliday) continue;
+                       
+                       workingDays++;
+                     }
+                     return workingDays;
+                   }}
               />;
           case ViewState.SETTINGS:
               return <SettingsView 

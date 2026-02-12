@@ -58,7 +58,25 @@ const App: React.FC = () => {
       setIsLoginLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Realtime subscription for documents
+    const documentsSubscription = supabase
+      .channel('public:employee_documents')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_documents' }, (payload) => {
+        // Refresh documents when a change occurs
+        const newData = payload.new as any;
+        const oldData = payload.old as any;
+        const empId = newData?.employee_id || oldData?.employee_id;
+        
+        if (empId) {
+           fetchEmployeeDocuments(empId);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      documentsSubscription.unsubscribe();
+    };
   }, []);
 
   // Fetch all app data when user is authenticated
@@ -252,19 +270,14 @@ const App: React.FC = () => {
     
     const { data } = await query;
     if (data) {
-      const docsMap: Record<string, EmployeeDocument[]> = {};
-      if (employeeId) {
-        // If fetching for specific employee, keep other employees' docs
-        Object.assign(docsMap, employeeDocuments);
-      }
+      // Group fetched documents by employee_id
+      const fetchedDocsMap: Record<string, EmployeeDocument[]> = {};
       
       data.forEach((doc: any) => {
-        if (!docsMap[doc.employee_id]) {
-          docsMap[doc.employee_id] = [];
+        if (!fetchedDocsMap[doc.employee_id]) {
+          fetchedDocsMap[doc.employee_id] = [];
         }
-        // Check if doc already exists to avoid duplicates if merging
-        if (!docsMap[doc.employee_id].find(d => d.id === doc.id)) {
-          docsMap[doc.employee_id].push({
+        fetchedDocsMap[doc.employee_id].push({
             id: doc.id,
             employeeId: doc.employee_id,
             documentType: doc.document_type,
@@ -274,10 +287,25 @@ const App: React.FC = () => {
             mimeType: doc.mime_type,
             uploadedBy: doc.uploaded_by,
             uploadedAt: doc.uploaded_at
-          });
+        });
+      });
+
+      setEmployeeDocuments(prev => {
+        if (employeeId) {
+          // If updating a single employee, replace ONLY that employee's entries
+          // We use the new data from DB (fetchedDocsMap[employeeId] or empty array if no docs left)
+          return {
+            ...prev,
+            [employeeId]: fetchedDocsMap[employeeId] || []
+          };
+        } else {
+          // If fetching ALL, assume we are replacing the entire cache or merging wholesale
+          // For safety/simplicity in this app context, if we fetch *all*, we can replace *all* 
+          // to ensure deleted employees/docs are cleaned up. 
+          // However, if we want to be safer about keeping keys not in response (rare case if fetch all):
+          return fetchedDocsMap;
         }
       });
-      setEmployeeDocuments(prev => ({...prev, ...docsMap}));
     }
   };
 
@@ -285,9 +313,14 @@ const App: React.FC = () => {
     employeeId: string, 
     documents: DocumentUpload[]
   ) => {
+    let successCount = 0;
+    
     for (const doc of documents) {
       const fileExt = doc.file.name.split('.').pop();
-      const fileName = `${doc.documentType}_${Date.now()}.${fileExt}`;
+      // Sanitize file name
+      const sanitizedName = doc.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const timestamp = Date.now();
+      const fileName = `${doc.documentType}_${timestamp}.${fileExt}`;
       const filePath = `${employeeId}/${fileName}`;
       
       // Upload to storage
@@ -299,12 +332,13 @@ const App: React.FC = () => {
         });
       
       if (uploadError) {
-        console.error('Error uploading document:', uploadError);
+        console.error(`Error uploading document ${doc.file.name}:`, uploadError);
+        alert(`Failed to upload ${doc.file.name}: ${uploadError.message}`);
         continue;
       }
       
       // Save metadata to database
-      await supabase.from('employee_documents').insert({
+      const { error: dbError } = await supabase.from('employee_documents').insert({
         employee_id: employeeId,
         document_type: doc.documentType,
         file_name: doc.file.name,
@@ -313,9 +347,21 @@ const App: React.FC = () => {
         mime_type: doc.file.type,
         uploaded_by: currentUser?.id
       });
+
+      if (dbError) {
+         console.error(`Error saving metadata for ${doc.file.name}:`, dbError);
+         // Try to cleanup the uploaded file
+         await supabase.storage.from('employee-documents').remove([filePath]);
+         alert(`Failed to save metadata for ${doc.file.name}`);
+      } else {
+        successCount++;
+      }
     }
     
-    fetchEmployeeDocuments(employeeId);
+    if (successCount > 0) {
+      // alert(`Successfully uploaded ${successCount} document(s)`);
+      fetchEmployeeDocuments(employeeId);
+    }
   };
 
   const deleteEmployeeDocument = async (documentId: string, filePath: string) => {
@@ -324,6 +370,8 @@ const App: React.FC = () => {
     
     if (storageError) {
        console.error('Error deleting file from storage:', storageError);
+       alert('Failed to delete file from storage: ' + storageError.message);
+       // Continue to try deleting metadata even if storage fail (orphan record)
     }
     
     // Delete from database
@@ -331,11 +379,10 @@ const App: React.FC = () => {
 
     if (dbError) {
       console.error('Error deleting document metadata:', dbError);
+      alert('Failed to delete document record: ' + dbError.message);
+    } else {
+       fetchEmployeeDocuments();
     }
-    
-    // Refresh documents
-    // Extract employeeId from filePath (it's the first part) or just refetch all
-    fetchEmployeeDocuments();
   };
 
   const getDocumentSignedUrl = async (filePath: string) => {

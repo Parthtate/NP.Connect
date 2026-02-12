@@ -554,9 +554,18 @@ const DocumentManagerModal: React.FC<DocumentManagerModalProps> = ({ employee, i
   const handleUpload = async () => {
     if (onUpload && selectedFiles.length > 0) {
       setIsUploading(true);
-      await onUpload(employee.id, selectedFiles);
-      setIsUploading(false);
-      setSelectedFiles([]);
+      try {
+        await onUpload(employee.id, selectedFiles);
+        // Clear selection to indicate completion
+        setSelectedFiles([]);
+        // Optional: Close modal automatically or show a toast? 
+        // For now, user requested NO alert.
+      } catch (error) {
+        console.error("Upload error", error);
+        alert("An error occurred during upload.");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 

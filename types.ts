@@ -54,6 +54,9 @@ export interface Employee {
     ifsc: string;
     bankName: string;
   };
+  accountStatus?: 'pending' | 'active' | 'suspended';
+  leaveBalanceCurrentMonth?: number; // Cumulative paid leaves (2 added monthly, unused carry forward)
+  leaveBalanceMonth?: string; // Month (YYYY-MM) when balance was last updated
 }
 
 export interface AttendanceRecord {
@@ -75,6 +78,8 @@ export interface LeaveRequest {
   session: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF';
   requestedOn: string;
   reviewedOn?: string;
+  isPaid?: boolean; // Whether leave was paid (had sufficient balance) or unpaid
+  daysCount?: number; // Number of days (0.5 for half-day, 1.0 for full-day)
 }
 
 export interface PayrollRecord {
@@ -84,9 +89,9 @@ export interface PayrollRecord {
   hra: number;
   allowances: number;
   deductions: number;
-  adHocAllowance: number; // New field
-  adHocDeduction: number; // New field
-  workingDays: number;    // New field
+  adHocAllowance: number;
+  adHocDeduction: number;
+  workingDays: number;
   gross: number;
   net: number;
   presentDays: number;

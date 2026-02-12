@@ -212,6 +212,35 @@ const App: React.FC = () => {
     if (data) setSettings({ defaultWorkingDays: data.default_working_days });
   };
 
+  // Calculate working days for a month (Mon-Sat, exclude Sundays + holidays)
+  const calculateWorkingDays = (month: string): number => {
+    // month format: "2024-12"
+    const [year, monthNum] = month.split('-').map(Number);
+    
+    // Get total days in month
+    const daysInMonth = new Date(year, monthNum, 0).getDate();
+    
+    let workingDays = 0;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, monthNum - 1, day);
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+      
+      // Skip Sundays (dayOfWeek === 0)
+      if (dayOfWeek === 0) continue;
+      
+      // Check if this day is a holiday
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      const isHoliday = holidays.some(h => h.date === dateStr);
+      
+      if (!isHoliday) {
+        workingDays++; // Count Monday-Saturday excluding holidays
+      }
+    }
+    
+    return workingDays;
+  };
+
   const fetchAnnouncements = async () => {
     const { data } = await supabase.from('announcements').select('*').order('date', { ascending: false });
     if (data) setAnnouncements(data);
@@ -633,16 +662,88 @@ const App: React.FC = () => {
   };
 
   const updateLeaveStatus = async (id: string, status: 'Approved' | 'Rejected') => {
-    const { error } = await supabase
-      .from('leaves')
-      .update({ status, reviewed_on: new Date().toISOString().split('T')[0] })
-      .eq('id', id);
-    if (!error) fetchLeaves();
+    if (status === 'Rejected') {
+      // Just update status, no balance impact
+      const { error } = await supabase
+        .from('leaves')
+        .update({ status, reviewed_on: new Date().toISOString().split('T')[0] })
+        .eq('id', id);
+      if (!error) fetchLeaves();
+      return;
+    }
+
+    // For APPROVED leaves:
+    const leave = leaves.find(l => l.id === id);
+    if (!leave) return;
+
+    const employee = employees.find(e => e.id === leave.employeeId);
+    if (!employee) return;
+
+    // Calculate leave days
+    const daysCount = leave.session === 'FULL_DAY' ? 1.0 : 0.5;
+    
+    // Get current month for the leave
+    const leaveMonth = leave.startDate.substring(0, 7); // YYYY-MM
+    const currentMonth = new Date().toISOString().substring(0, 7);
+
+    // Calculate cumulative balance with carryforward
+    let balance = employee.leaveBalanceCurrentMonth ?? 2;
+    const lastUpdatedMonth = employee.leaveBalanceMonth;
+
+    if (!lastUpdatedMonth || lastUpdatedMonth !== leaveMonth) {
+      // New month: Add 2 new leaves to existing balance (carryforward)
+      const monthsElapsed = calculateMonthsDifference(lastUpdatedMonth, leaveMonth);
+      balance = (employee.leaveBalanceCurrentMonth ?? 0) + (2 * Math.max(1, monthsElapsed));
+    }
+
+    // Deduct from balance
+    const updatedBalance = Math.max(0, balance - daysCount);
+    const isPaid = balance >= daysCount; // Paid if sufficient balance
+
+    // Update leave record with paid/unpaid status
+    const { error: leaveError } = await supabase.from('leaves').update({
+      status: 'Approved',
+      reviewed_on: new Date().toISOString().split('T')[0],
+      is_paid: isPaid,
+      days_count: daysCount
+    }).eq('id', id);
+
+    if (leaveError) {
+      console.error('Error updating leave:', leaveError);
+      return;
+    }
+
+    // Update employee balance
+    const { error: empError } = await supabase.from('employees').update({
+      leave_balance_current_month: updatedBalance,
+      leave_balance_month: leaveMonth
+    }).eq('id', leave.employeeId);
+
+    if (empError) {
+      console.error('Error updating employee balance:', empError);
+    }
+
+    fetchLeaves();
+    fetchEmployees();
+  };
+
+  // Helper function to calculate months difference
+  const calculateMonthsDifference = (fromMonth: string | null | undefined, toMonth: string): number => {
+    if (!fromMonth) return 1;
+    
+    const [fromYear, fromMon] = fromMonth.split('-').map(Number);
+    const [toYear, toMon] = toMonth.split('-').map(Number);
+    
+    return ((toYear - fromYear) * 12) + (toMon - fromMon);
   };
 
   const processPayroll = async (month: string, workingDays: number, adjustments: Record<string, { allowance: number, deduction: number }>) => {
     const newPayrollRecords = employees.map(emp => {
-       // Calculate Summary for Month
+       // Calculate attendance summary for month
+       // Note: Attendance status already represents TOTAL daily credit (work + leave combined)
+       // - 'Present' = 1.0 day (could be work, paid leave, or combination)
+       // - 'Half Day' = 0.5 day (could be partial work, paid half-day leave, or combination)
+       // - 'Absent' = 0.0 day (no work, no paid leave)
        let present = 0, halfDay = 0, absent = 0;
        Object.values(attendance).forEach((att: AttendanceRecord) => {
           if (att.employeeId === emp.id && att.date.startsWith(month)) {
@@ -652,6 +753,8 @@ const App: React.FC = () => {
           }
        });
 
+       // Calculate effective days from attendance
+       // This already includes all leave handling - no separate deduction needed!
        const effectiveDays = present + (halfDay * 0.5);
        const { basic, hra, allowances, deductions } = emp.salary;
        const adj = adjustments[emp.id] || { allowance: 0, deduction: 0 };

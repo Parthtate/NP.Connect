@@ -12,9 +12,10 @@ interface PayrollViewProps {
   currentEmployeeId?: string;
   settings: CompanySettings;
   onProcessPayroll: (month: string, workingDays: number, adjustments: Record<string, { allowance: number, deduction: number }>) => void;
+  onCalculateWorkingDays: (month: string) => number; // New prop for auto-calculation
 }
 
-const PayrollView: React.FC<PayrollViewProps> = ({ role, employees, payroll, currentEmployeeId, settings, onProcessPayroll }) => {
+const PayrollView: React.FC<PayrollViewProps> = ({ role, employees, payroll, currentEmployeeId, settings, onProcessPayroll, onCalculateWorkingDays }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [payslipData, setPayslipData] = useState<{emp: Employee, record: PayrollRecord} | null>(null);
   
@@ -22,6 +23,12 @@ const PayrollView: React.FC<PayrollViewProps> = ({ role, employees, payroll, cur
   const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
   const [workingDaysInput, setWorkingDaysInput] = useState(settings.defaultWorkingDays);
   const [adjustments, setAdjustments] = useState<Record<string, { allowance: number, deduction: number }>>({});
+
+  // Auto-calculate working days when month changes
+  React.useEffect(() => {
+    const autoCalculated = onCalculateWorkingDays(selectedMonth);
+    setWorkingDaysInput(autoCalculated);
+  }, [selectedMonth, onCalculateWorkingDays]);
 
   const initiateProcess = () => {
     // Reset adjustments when opening
@@ -209,7 +216,7 @@ const PayrollView: React.FC<PayrollViewProps> = ({ role, employees, payroll, cur
                       onChange={(e) => setWorkingDaysInput(Number(e.target.value))}
                       className="w-32 p-2 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium focus:ring-2 focus:ring-blue-500" 
                     />
-                    <span className="text-xs text-slate-400 ml-2">(Default from Settings)</span>
+                    <span className="text-xs text-green-600 ml-2">✓ Auto-calculated (Mon-Sat minus holidays/Sundays)</span>
                   </div>
                </div>
             </div>

@@ -480,12 +480,34 @@ const App: React.FC = () => {
       return;
     }
     const today = new Date().toISOString().split('T')[0];
+    
+    // Check if already checked in
+    const existingAtt = attendance[`${currentUser.employeeId}-${today}`];
+    if (existingAtt?.checkIn) {
+      console.warn('Already checked in today');
+      return;
+    }
+
+    // Check for approved full-day leave
+    const approvedFullDayLeave = leaves.find(l => 
+      l.employeeId === currentUser.employeeId && 
+      l.startDate === today && 
+      l.status === 'Approved' &&
+      l.type !== 'HALF_DAY' // Any leave type except half-day
+    );
+
+    if (approvedFullDayLeave) {
+      // They have full day leave - should they be checking in?
+      // Allow it but log warning (they might want to cancel leave)
+      console.warn(`Note: You have approved ${approvedFullDayLeave.type} leave for today`);
+    }
+
     const timeNow = new Date().toLocaleTimeString('en-US', {hour12: false});
 
     const payload = {
       employee_id: currentUser.employeeId,
       date: today,
-      status: 'Present',
+      status: 'Present', // Initial status, will be updated on check-out
       check_in: timeNow
     };
 
@@ -500,13 +522,26 @@ const App: React.FC = () => {
       const [inH, inM] = checkInStr.split(':').map(Number);
       const [outH, outM] = checkOutStr.split(':').map(Number);
       
-      const start = inH * 60 + inM;
-      const end = outH * 60 + outM;
-      const durationMinutes = end - start;
+      const start = inH * 60 + (inM || 0);
+      const end = outH * 60 + (outM || 0);
+      
+      let durationMinutes = end - start;
+      
+      // Handle midnight crossing (next day checkout)
+      if (durationMinutes < 0) {
+        durationMinutes += 24 * 60; // Add 24 hours
+      }
+      
       const durationHours = durationMinutes / 60;
 
-      if (durationHours < 4) return 'Absent';
-      if (durationHours >= 4 && durationHours < 6) return 'Half Day';
+      // Configurable thresholds (can move to settings later)
+      const HALF_DAY_MIN_HOURS = 4;
+      const FULL_DAY_MIN_HOURS = 6;
+
+      if (durationHours < HALF_DAY_MIN_HOURS) return 'Absent';
+      if (durationHours >= HALF_DAY_MIN_HOURS && durationHours < FULL_DAY_MIN_HOURS) {
+        return 'Half Day';
+      }
       return 'Present';
   };
 
@@ -515,8 +550,7 @@ const App: React.FC = () => {
     const today = new Date().toISOString().split('T')[0];
     const timeNow = new Date().toLocaleTimeString('en-US', {hour12: false});
 
-    // We update the existing record
-    // First, we need to fetch the check-in time to calculate duration
+    // Fetch the check-in time to calculate duration
     const { data: currentRecord } = await supabase
         .from('attendance')
         .select('check_in')
@@ -524,55 +558,61 @@ const App: React.FC = () => {
         .eq('date', today)
         .single();
     
-    let status = 'Present'; // Default fallback
-    
-    if (currentRecord && currentRecord.check_in) {
-        status = getStatusFromDuration(currentRecord.check_in, timeNow);
+    if (!currentRecord?.check_in) {
+      console.error('Cannot check out without check-in');
+      return;
     }
+
+    // Calculate work status based on hours worked
+    const workStatus = getStatusFromDuration(currentRecord.check_in, timeNow);
+    let finalStatus = workStatus; // Default: status = work only
     
-    // Check if there is an approved Half Day leave for today
-    // If so, we might want to ensure we don't mark as Absent if they met the half-day criteria
-    const approvedHalfDay = leaves.find(l => 
+    // Check for any approved leave for today
+    const approvedLeave = leaves.find(l => 
         l.employeeId === currentUser.employeeId && 
         l.startDate === today && 
-        l.status === 'Approved' && 
-        l.type === 'HALF_DAY'
+        l.status === 'Approved'
     );
 
-    if (approvedHalfDay) {
-        // If they have an approved half day, and they worked enough for the other half (e.g. > 2-3 hours?), 
-        // strictly speaking the logic above handles it. 
-        // If they work 4 hours, they get 'Half Day' status, which matches the leave.
-        // If they work < 4 hours, they get 'Absent', which is correct (they took half day but didn't work the other half).
-        // So the duration logic actually holds up well.
-        // We just need to make sure 'Half Day' status is what we want. 
-        // Yes, if status is 'Half Day', it means they were present for half the day.
+    if (approvedLeave) {
+      // Employee has approved leave for today
+      
+      if (approvedLeave.type === 'HALF_DAY') {
+        // Half-day leave: combine leave credit (0.5) + work credit
+        const session = approvedLeave.session;
+        
+        if (session === 'FIRST_HALF' || session === 'SECOND_HALF') {
+          // They have 0.5 day leave credit
+          
+          if (workStatus === 'Half Day' || workStatus === 'Present') {
+            // They worked 4+ hours (0.5 day work credit)
+            // Total: 0.5 (leave) + 0.5 (work) = 1.0 day
+            finalStatus = 'Present'; // ✅ Full day credit
+          } else {
+            // They worked < 4 hours (0 work credit)
+            // Total: 0.5 (leave) + 0 (work) = 0.5 day
+            finalStatus = 'Half Day'; // ✅ Half day from leave only
+          }
+        }
+      } else {
+        // Full day leave (CASUAL, SICK, etc.)
+        // They shouldn't be working, but if they checked in:
+        // Total credit capped at 1.0 day (can't exceed full day)
+        finalStatus = 'Present'; // ✅ Full day credit from leave
+      }
     }
 
+    // Update attendance with final status (represents total daily credit)
     const { error } = await supabase
       .from('attendance')
-      .update({ check_out: timeNow, status: status })
+      .update({ check_out: timeNow, status: finalStatus })
       .eq('employee_id', currentUser.employeeId)
       .eq('date', today);
 
     if (!error) fetchAttendance();
   };
 
-  const employeeMarkHalfDay = async () => {
-    if (!currentUser?.employeeId) return;
-    const today = new Date().toISOString().split('T')[0];
-    const timeNow = new Date().toLocaleTimeString('en-US', {hour12: false});
 
-    const payload = {
-      employee_id: currentUser.employeeId,
-      date: today,
-      status: 'Half Day',
-      check_in: timeNow
-    };
-
-    const { error } = await supabase.from('attendance').upsert(payload, { onConflict: 'employee_id,date' });
-    if (!error) fetchAttendance();
-  };
 
   const applyLeave = async (leaveData: any) => {
     const newId = 'L' + Date.now().toString().slice(-5);
@@ -840,7 +880,6 @@ const App: React.FC = () => {
                   announcements={announcements}
                   onCheckIn={employeeCheckIn}
                   onCheckOut={employeeCheckOut}
-                  onMarkHalfDay={employeeMarkHalfDay}
                   onViewAllEmployees={() => setCurrentView(ViewState.EMPLOYEES)}
                   onAddAnnouncement={addAnnouncement}
                   onDeleteAnnouncement={deleteAnnouncement}

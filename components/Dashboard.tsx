@@ -20,7 +20,6 @@ interface DashboardProps {
   announcements?: Announcement[]; // New Prop
   onCheckIn: () => void;
   onCheckOut: () => void;
-  onMarkHalfDay: () => void;
   onViewAllEmployees?: () => void;
   onAddAnnouncement?: (announcement: Omit<Announcement, 'id'>) => void;
   onDeleteAnnouncement?: (id: string) => void;
@@ -28,7 +27,7 @@ interface DashboardProps {
   onGetDocumentUrl?: (filePath: string) => Promise<string | null>; // New Prop
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leaves, holidays, announcements = [], onCheckIn, onCheckOut, onMarkHalfDay, onViewAllEmployees, onAddAnnouncement, onDeleteAnnouncement, employeeDocuments = {}, onGetDocumentUrl }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leaves, holidays, announcements = [], onCheckIn, onCheckOut, onViewAllEmployees, onAddAnnouncement, onDeleteAnnouncement, employeeDocuments = {}, onGetDocumentUrl }) => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -102,23 +101,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
            <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
               <h3 className="text-lg font-bold text-slate-800 mb-6">Today's Attendance</h3>
               {!myTodayAtt || !myTodayAtt.checkIn ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button 
-                    onClick={onCheckIn}
-                    className="flex flex-col items-center justify-center p-8 rounded-xl bg-linear-to-br from-green-500 to-green-600 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
-                  >
-                    <LogIn size={48} className="mb-4" />
-                    <span className="text-xl font-bold">Check In</span>
-                    <span className="text-green-100 text-sm mt-1">Start your day</span>
-                  </button>
-                  <button 
-                    onClick={onMarkHalfDay}
-                    className="flex flex-col items-center justify-center p-8 rounded-xl bg-linear-to-br from-orange-400 to-orange-500 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
-                  >
-                    <Hourglass size={48} className="mb-4" />
-                    <span className="text-xl font-bold">Half Day</span>
-                  </button>
-                </div>
+                <button 
+                  onClick={onCheckIn}
+                  className="w-full flex flex-col items-center justify-center p-8 rounded-xl bg-linear-to-br from-green-500 to-green-600 text-white hover:shadow-lg hover:scale-[1.02] transition-all"
+                >
+                  <LogIn size={48} className="mb-4" />
+                  <span className="text-xl font-bold">Check In</span>
+                  <span className="text-green-100 text-sm mt-1">Start your day</span>
+                </button>
               ) : (
                 <div className="space-y-4">
                    <div className="flex items-center justify-between p-5 bg-green-50 border border-green-200 rounded-xl">
@@ -137,17 +127,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                        <LogOut size={24} /> Check Out
                      </button>
                    ) : (
-                    <div className="flex items-center justify-between p-5 bg-orange-50 border border-orange-200 rounded-xl">
-                      <div>
-                        <p className="text-sm font-medium text-orange-700">Checked Out At</p>
-                        <p className="text-3xl font-bold text-orange-900">{myTodayAtt.checkOut}</p>
+                    <>
+                      <div className="flex items-center justify-between p-5 bg-orange-50 border border-orange-200 rounded-xl">
+                        <div>
+                          <p className="text-sm font-medium text-orange-700">Checked Out At</p>
+                          <p className="text-3xl font-bold text-orange-900">{myTodayAtt.checkOut}</p>
+                        </div>
+                        <CheckCircle className="text-orange-500" size={40} />
                       </div>
-                      <CheckCircle className="text-orange-500" size={40} />
-                    </div>
-                   )}
-                   
-                   {myTodayAtt.status === 'Half Day' && (
-                     <div className="p-3 bg-yellow-50 text-yellow-800 text-center rounded-lg text-sm font-medium">Marked as Half Day</div>
+                      
+                      {/* Show calculated status */}
+                      <div className={`p-4 rounded-xl text-center font-bold ${
+                        myTodayAtt.status === 'Present' ? 'bg-green-100 text-green-800' :
+                        myTodayAtt.status === 'Half Day' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        Status: {myTodayAtt.status}
+                      </div>
+                    </>
                    )}
                 </div>
               )}

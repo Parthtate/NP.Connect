@@ -641,7 +641,7 @@ const App: React.FC = () => {
 
     // Calculate work status based on hours worked
     const workStatus = getStatusFromDuration(currentRecord.check_in, timeNow);
-    let finalStatus = workStatus; // Default: status = work only
+    let finalStatus: AttendanceRecord['status'] = workStatus; // Default: status = work only
     
     // Check for any approved leave for today
     const approvedLeave = leaves.find(l => 
@@ -650,31 +650,28 @@ const App: React.FC = () => {
         l.status === 'Approved'
     );
 
-    if (approvedLeave) {
+     if (approvedLeave) {
       // Employee has approved leave for today
       
-      if (approvedLeave.type === 'HALF_DAY') {
+      if (approvedLeave.type === 'HALF_DAY' || approvedLeave.session !== 'FULL_DAY') {
         // Half-day leave: combine leave credit (0.5) + work credit
-        const session = approvedLeave.session;
+        // const session = approvedLeave.session;
         
-        if (session === 'FIRST_HALF' || session === 'SECOND_HALF') {
-          // They have 0.5 day leave credit
-          
-          if (workStatus === 'Half Day' || workStatus === 'Present') {
-            // They worked 4+ hours (0.5 day work credit)
-            // Total: 0.5 (leave) + 0.5 (work) = 1.0 day
-            finalStatus = 'Present'; // ✅ Full day credit
-          } else {
-            // They worked < 4 hours (0 work credit)
-            // Total: 0.5 (leave) + 0 (work) = 0.5 day
-            finalStatus = 'Half Day'; // ✅ Half day from leave only
-          }
+        if (workStatus === 'Half Day' || workStatus === 'Present') {
+          // Worked >= 4 hours (0.5 work credit)
+          // 0.5 (leave) + 0.5 (work) => 1.0 (Full Day Present)
+          finalStatus = 'Present'; 
+        } else {
+          // Worked < 4 hours
+          // 0.5 (leave) + 0 (work) => 0.5 (Half Day Leave)
+          finalStatus = 'HALF_DAY_LEAVE'; 
         }
       } else {
-        // Full day leave (CASUAL, SICK, etc.)
-        // They shouldn't be working, but if they checked in:
-        // Total credit capped at 1.0 day (can't exceed full day)
-        finalStatus = 'Present'; // ✅ Full day credit from leave
+        // Full day leave
+        // If checked out, we generally honor the Leave status unless they worked a full day?
+        // Let's stick to LEAVE to avoid confusion, or Present if they really worked.
+        // User Requirement: "Mark attendance as LEAVE" if full day approved.
+        finalStatus = 'LEAVE'; 
       }
     }
 
@@ -709,6 +706,16 @@ const App: React.FC = () => {
   };
 
   const updateLeaveStatus = async (id: string, status: 'Approved' | 'Rejected') => {
+    // Idempotency / Double Detection Check
+    const leave = leaves.find(l => l.id === id);
+    if (!leave) return;
+    
+    // If already approved, do not deduct again
+    if (leave.status === 'Approved') {
+        console.warn('Leave already approved, skipping deduction.');
+        return;
+    }
+
     if (status === 'Rejected') {
       // Just update status, no balance impact
       const { error } = await supabase
@@ -720,18 +727,18 @@ const App: React.FC = () => {
     }
 
     // For APPROVED leaves:
-    const leave = leaves.find(l => l.id === id);
-    if (!leave) return;
-
     const employee = employees.find(e => e.id === leave.employeeId);
     if (!employee) return;
 
-    // Calculate leave days
-    const daysCount = leave.session === 'FULL_DAY' ? 1.0 : 0.5;
+    // Calculate leave days (0.5 for half day, 1.0 for full day)
+    // Logic: Session != FULL_DAY  => Half Day (0.5)
+    //        Session == FULL_DAY  => Full Day (1.0)
+    const isHalfDay = leave.session !== 'FULL_DAY';
+    const daysCount = isHalfDay ? 0.5 : 1.0;
     
     // Get current month for the leave
     const leaveMonth = leave.startDate.substring(0, 7); // YYYY-MM
-    const currentMonth = new Date().toISOString().substring(0, 7);
+    // const currentMonth = new Date().toISOString().substring(0, 7);
 
     // Calculate cumulative balance with carryforward
     let balance = employee.leaveBalanceCurrentMonth ?? 2;
@@ -747,7 +754,7 @@ const App: React.FC = () => {
     const updatedBalance = Math.max(0, balance - daysCount);
     const isPaid = balance >= daysCount; // Paid if sufficient balance
 
-    // Update leave record with paid/unpaid status
+    // Update leave record within 'leaves' table
     const { error: leaveError } = await supabase.from('leaves').update({
       status: 'Approved',
       reviewed_on: new Date().toISOString().split('T')[0],
@@ -770,8 +777,34 @@ const App: React.FC = () => {
       console.error('Error updating employee balance:', empError);
     }
 
+    // MARK ATTENDANCE on approval
+    // If Paid: Mark as LEAVE / HALF_DAY_LEAVE
+    // If Unpaid: We can mark as Absent or leave it (defaults to Absent if not marked)
+    // Assuming we mark attendance for Paid leaves only to ensure they get paid in payroll.
+    if (isPaid) {
+        const attendanceStatus = isHalfDay ? 'HALF_DAY_LEAVE' : 'LEAVE';
+        
+        // We iterate through dates if startDate != endDate (multi-day leave)
+        // Simple handling for now (assuming single/range):
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        
+        for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+             const dateStr = d.toISOString().split('T')[0];
+             // Upsert attendance
+             await supabase.from('attendance').upsert({
+                 employee_id: leave.employeeId,
+                 date: dateStr,
+                 status: attendanceStatus,
+                 check_in: null, // Leaves don't have check-in usually
+                 check_out: null
+             }, { onConflict: 'employee_id,date' });
+        }
+    }
+
     fetchLeaves();
     fetchEmployees();
+    fetchAttendance(); // Refresh attendance to show the new status
   };
 
   // Helper function to calculate months difference
@@ -796,6 +829,8 @@ const App: React.FC = () => {
           if (att.employeeId === emp.id && att.date.startsWith(month)) {
              if (att.status === 'Present') present++;
              else if (att.status === 'Half Day') halfDay++;
+             else if (att.status === 'LEAVE') present++; // Count Paid Full Leave as Present for salary
+             else if (att.status === 'HALF_DAY_LEAVE') halfDay++; // Count Paid Half Leave as Half Day
              else absent++;
           }
        });
@@ -1065,6 +1100,7 @@ const App: React.FC = () => {
                   currentEmployeeId={currentUser.employeeId}
                   onApplyLeave={applyLeave}
                   onUpdateStatus={updateLeaveStatus}
+                  attendance={attendance}
               />;
           case ViewState.PAYROLL:
           case ViewState.MY_PAYSLIPS:

@@ -22,8 +22,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
     let present = 0, absent = 0, halfDay = 0;
     (Object.values(attendance) as AttendanceRecord[]).forEach((att) => {
       if (att.employeeId === empId) {
-        if (att.status === 'Present') present++;
-        else if (att.status === 'Half Day') halfDay++;
+        if (att.status === 'Present' || att.status === 'LEAVE') present++;
+        else if (att.status === 'Half Day' || att.status === 'HALF_DAY_LEAVE') halfDay++;
         else absent++;
       }
     });
@@ -136,8 +136,10 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                       ${att.status === 'Present' ? 'bg-green-100 text-green-800' : 
                         att.status === 'Half Day' ? 'bg-yellow-100 text-yellow-800' : 
+                        att.status === 'LEAVE' ? 'bg-blue-100 text-blue-800' :
+                        att.status === 'HALF_DAY_LEAVE' ? 'bg-purple-100 text-purple-800' :
                         'bg-red-100 text-red-800'}`}>
-                      {att.status}
+                      {att.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-slate-600">{att.checkIn || '-'}</td>
@@ -189,11 +191,14 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
                         <span className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2
                           ${att.status === 'Present' ? 'bg-green-100 text-green-700' : 
                             att.status === 'Half Day' ? 'bg-yellow-100 text-yellow-700' : 
+                            att.status === 'LEAVE' ? 'bg-blue-100 text-blue-700' :
+                            att.status === 'HALF_DAY_LEAVE' ? 'bg-purple-100 text-purple-700' :
                             'bg-red-100 text-red-700'}`}>
                           {att.status === 'Present' && <Check size={16} />}
                           {att.status === 'Half Day' && <Clock size={16} />}
+                          {(att.status === 'LEAVE' || att.status === 'HALF_DAY_LEAVE') && <Calendar size={16} />}
                           {att.status === 'Absent' && <X size={16} />}
-                          {att.status}
+                          {att.status.replace('_', ' ')}
                         </span>
                         {att.checkIn && (
                           <span className="text-xs text-slate-500">

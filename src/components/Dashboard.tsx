@@ -40,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
   const totalEmployees = employees.length;
   
   const todayAttendance = (Object.values(attendance) as AttendanceRecord[]).filter((a) => a.date === today);
-  const presentCount = todayAttendance.filter(a => a.status === 'Present' || a.status === 'Half Day').length;
+  const presentCount = todayAttendance.filter(a => a.status === 'Present' || a.status === 'Half Day' || a.status === 'LEAVE' || a.status === 'HALF_DAY_LEAVE').length;
   const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
 
   // Employee specific

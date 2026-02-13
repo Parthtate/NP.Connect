@@ -62,7 +62,7 @@ export interface Employee {
 export interface AttendanceRecord {
   employeeId: string;
   date: string;
-  status: 'Present' | 'Absent' | 'Half Day';
+  status: 'Present' | 'Absent' | 'Half Day' | 'LEAVE' | 'HALF_DAY_LEAVE';
   checkIn?: string | null;
   checkOut?: string | null;
 }

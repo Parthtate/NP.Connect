@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LeaveRequest, UserRole, Employee } from '../../types';
+import { LeaveRequest, UserRole, Employee, AttendanceRecord } from '../../types';
 import { Plus, CheckCircle, Clock, XCircle, Check, X, Calendar, UserCheck } from 'lucide-react';
 import Modal from './Modal';
 
@@ -8,17 +8,54 @@ interface LeaveViewProps {
   leaves: LeaveRequest[];
   employees: Employee[]; // needed for HR to show names
   currentEmployeeId?: string;
+  attendance?: Record<string, AttendanceRecord>;
   onApplyLeave: (leave: Omit<LeaveRequest, 'id' | 'status' | 'requestedOn'>) => void;
   onUpdateStatus: (id: string, status: 'Approved' | 'Rejected') => void;
 }
 
-const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentEmployeeId, onApplyLeave, onUpdateStatus }) => {
+const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, attendance = {}, currentEmployeeId, onApplyLeave, onUpdateStatus }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLeaveType, setSelectedLeaveType] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [validationError, setValidationError] = useState<string>('');
+
+  const checkAvailability = (date: string) => {
+    if (!currentEmployeeId || !date) return;
+    
+    // Check existing leaves
+    const existingLeave = leaves.find(l => 
+        l.employeeId === currentEmployeeId && 
+        l.status !== 'Rejected' && // Ignore rejected
+        ((date >= l.startDate && date <= l.endDate))
+    );
+
+    if (existingLeave) {
+        setValidationError(`You have already applied for ${existingLeave.type.replace('_', ' ')} on this date.`);
+        return;
+    }
+
+    // Check attendance (if already marked present/leave)
+    const att = attendance[`${currentEmployeeId}-${date}`];
+    if (att) {
+        if (att.status === 'Present' || att.status === 'LEAVE') {
+             setValidationError('Attendance/Leave is already marked for this date.');
+             return;
+        }
+        if (att.status === 'Half Day' || att.status === 'HALF_DAY_LEAVE') {
+             // If already half day, we technically could allow another half day, but user requested strict hiding
+             setValidationError('Half-day attendance/leave already marked for this date.');
+             return; 
+        }
+    }
+    
+    setValidationError('');
+  };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedLeaveType('');
+    setStartDate('');
+    setValidationError('');
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,10 +66,12 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentE
     
     // Auto-set end date if half-day
     let endDate = formData.get('endDate') as string;
-    const startDate = formData.get('startDate') as string;
+    // const startDate = formData.get('startDate') as string; // Use state instead
     if (session !== 'FULL_DAY') {
         endDate = startDate;
     }
+    
+    if (validationError) return; // Block submit if error
 
     onApplyLeave({
       employeeId: currentEmployeeId!, 
@@ -208,12 +247,25 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentE
             <div className="grid grid-cols-2 gap-5">
                <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Start Date *</label>
-                  <input type="date" name="startDate" required className="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input 
+                    type="date" 
+                    name="startDate" 
+                    required 
+                    value={startDate}
+                    onChange={(e) => {
+                        setStartDate(e.target.value);
+                        checkAvailability(e.target.value);
+                    }}
+                    className={`w-full p-2.5 border rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationError ? 'border-red-500 focus:ring-red-200' : 'border-slate-300'}`} 
+                  />
+                  {validationError && <p className="text-xs text-red-600 mt-1 font-medium">{validationError}</p>}
                </div>
-               <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">End Date *</label>
-                  <input type="date" name="endDate" required className="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-               </div>
+               {selectedLeaveType !== 'HALF_DAY' && (
+                   <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">End Date *</label>
+                      <input type="date" name="endDate" required className="w-full p-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                   </div>
+               )}
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Reason *</label>
@@ -227,7 +279,7 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, currentE
             </div>
             <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
               <button type="button" onClick={closeModal} className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-              <button type="submit" className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm">Submit Application</button>
+              <button type="submit" disabled={!!validationError} className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Submit Application</button>
             </div>
          </form>
       </Modal>

@@ -85,7 +85,8 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, attendan
   };
 
   // Filter leaves based on role
-  const displayedLeaves = role === UserRole.HR 
+  // HR and ADMIN see all leaves, EMPLOYEE sees only their own
+  const displayedLeaves = (role === UserRole.HR || role === UserRole.ADMIN)
     ? leaves 
     : leaves.filter(l => l.employeeId === currentEmployeeId);
 
@@ -107,7 +108,7 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, attendan
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
-            {role === UserRole.HR ? 'Leave Management' : 'My Leave Applications'}
+            {(role === UserRole.HR || role === UserRole.ADMIN) ? 'Leave Management' : 'My Leave Applications'}
           </h2>
           <p className="text-slate-500">Manage leave requests and status</p>
         </div>
@@ -152,7 +153,7 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, attendan
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              {role === UserRole.HR && <th className="p-4 text-xs font-semibold text-slate-500 uppercase">Employee</th>}
+              {(role === UserRole.HR || role === UserRole.ADMIN) && <th className="p-4 text-xs font-semibold text-slate-500 uppercase">Employee</th>}
               <th className="p-4 text-xs font-semibold text-slate-500 uppercase">Type</th>
               <th className="p-4 text-xs font-semibold text-slate-500 uppercase">Duration</th>
               <th className="p-4 text-xs font-semibold text-slate-500 uppercase">Reason</th>
@@ -165,7 +166,7 @@ const LeaveView: React.FC<LeaveViewProps> = ({ role, leaves, employees, attendan
               const emp = employees.find(e => e.id === leave.employeeId);
               return (
                 <tr key={leave.id}>
-                  {role === UserRole.HR && (
+                  {(role === UserRole.HR || role === UserRole.ADMIN) && (
                     <td className="p-4">
                       <div className="font-medium text-slate-900">{emp?.fullName || leave.employeeId}</div>
                       <div className="text-xs text-slate-500">{leave.employeeId}</div>

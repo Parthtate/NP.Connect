@@ -13,14 +13,28 @@ interface AttendanceViewProps {
 
 const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attendance, currentEmployeeId, onMarkAttendance }) => {
   const today = new Date().toISOString().split('T')[0];
+  const currentMonth = today.substring(0, 7);
+  const [selectedMonth, setSelectedMonth] = React.useState(currentMonth); // YYYY-MM
+  const [showHistoryModal, setShowHistoryModal] = React.useState(false);
 
   const getTodayAttendance = (empId: string) => {
     return attendance[`${empId}-${today}`];
   };
 
+  // Filter attendance by selected month
+  // Filter attendance by valid month (current month for summary, selected for modal)
+  const currentMonthAttendance = React.useMemo(() => {
+    return (Object.values(attendance) as AttendanceRecord[]).filter(att => att.date.startsWith(currentMonth));
+  }, [attendance, currentMonth]);
+
+  const filteredAttendance = React.useMemo(() => {
+    return (Object.values(attendance) as AttendanceRecord[]).filter(att => att.date.startsWith(selectedMonth));
+  }, [attendance, selectedMonth]);
+
   const calculateSummary = (empId: string) => {
     let present = 0, absent = 0, halfDay = 0;
-    (Object.values(attendance) as AttendanceRecord[]).forEach((att) => {
+    // Use currentMonthAttendance for the main summary view
+    currentMonthAttendance.forEach((att) => {
       if (att.employeeId === empId) {
         if (att.status === 'Present' || att.status === 'LEAVE') present++;
         else if (att.status === 'Half Day' || att.status === 'HALF_DAY_LEAVE') halfDay++;
@@ -31,17 +45,30 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
     return { present, absent, halfDay, total };
   };
 
-  const exportToCSV = () => {
+  const exportToCSV = (month: string) => {
+    // Filter by the requested month (either current or selected)
+    const recordsToExport = (Object.values(attendance) as AttendanceRecord[]).filter(att => att.date.startsWith(month));
+    
     const headers = ['Employee ID', 'Name', 'Date', 'Status', 'Check In', 'Check Out'];
-    const rows = (Object.values(attendance) as AttendanceRecord[]).map(record => {
+    
+    const escapeCsvField = (field: string | number | null | undefined) => {
+        if (field === null || field === undefined) return '';
+        const stringValue = String(field);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+    };
+
+    const rows = recordsToExport.map(record => {
       const emp = employees.find(e => e.id === record.employeeId);
       return [
-        record.employeeId,
-        `"${emp?.fullName || 'Unknown'}"`,
-        formatDateForCSV(record.date), // Fixed: Use DD-MM-YYYY format for Excel
-        record.status,
-        record.checkIn || '',
-        record.checkOut || ''
+        escapeCsvField(record.employeeId),
+        escapeCsvField(emp?.fullName || 'Unknown'),
+        escapeCsvField(formatDateForCSV(record.date)), 
+        escapeCsvField(record.status),
+        escapeCsvField(record.checkIn || ''),
+        escapeCsvField(record.checkOut || '')
       ].join(',');
     });
     
@@ -52,7 +79,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `attendance_export_${formatDateForCSV(new Date())}.csv`);
+    link.setAttribute("download", `attendance_${month}_${formatDateForCSV(new Date())}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -164,6 +191,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
         <p className="text-slate-500">Mark and manage employee attendance</p>
       </div>
 
+
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100">
@@ -218,39 +247,51 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
           </div>
         </div>
 
-        {/* Export Widget (Replaces Bulk Upload) */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-fit">
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">Export Data</h3>
-          <p className="text-sm text-slate-500 mb-4">Download comprehensive attendance records</p>
+        {/* Export Widget & History Toggle */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-fit space-y-6">
           
-          <div className="border border-slate-200 rounded-xl p-6 bg-slate-50">
-             <div className="flex items-center gap-3 mb-4">
-               <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                 <FileText size={24} />
+          {/* Export Current Month */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-2">Export Data</h3>
+            <p className="text-sm text-slate-500 mb-4">Download attendance for <strong>Current Month</strong></p>
+            
+            <div className="border border-slate-200 rounded-xl p-6 bg-slate-50">
+               <div className="flex items-center gap-3 mb-4">
+                 <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                   <FileText size={24} />
+                 </div>
+                 <div>
+                   <div className="font-semibold text-slate-800">CSV Export</div>
+                   <div className="text-xs text-slate-500">{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</div>
+                 </div>
                </div>
-               <div>
-                 <div className="font-semibold text-slate-800">CSV Export</div>
-                 <div className="text-xs text-slate-500">All Employees</div>
-               </div>
-             </div>
+               <button 
+                  onClick={() => exportToCSV(currentMonth)}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+               >
+                  <Download size={18} /> Download CSV
+               </button>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-6">
+             <h3 className="text-lg font-semibold text-slate-800 mb-2">History</h3>
+             <p className="text-sm text-slate-500 mb-4">View and export past attendance records</p>
              <button 
-                onClick={exportToCSV}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                onClick={() => setShowHistoryModal(true)}
+                className="w-full flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 py-2.5 rounded-lg hover:bg-slate-50 transition-colors shadow-sm font-medium"
              >
-                <Download size={18} /> Download CSV
+                <Calendar size={18} /> View Detailed History
              </button>
           </div>
-          
-          <div className="mt-4 p-3 rounded-lg border border-yellow-100 bg-yellow-50 text-xs text-yellow-800">
-             <strong>Note:</strong> The export includes all available history for active employees.
-          </div>
+
         </div>
       </div>
 
-      {/* Monthly Summary */}
+      {/* Monthly Summary (Current Month) */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100">
-           <h3 className="text-lg font-semibold text-slate-800">Monthly Attendance Summary</h3>
+           <h3 className="text-lg font-semibold text-slate-800">Monthly Summary ({new Date().toLocaleString('default', { month: 'long', year: 'numeric' })})</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -297,6 +338,95 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ role, employees, attend
           </table>
         </div>
       </div>
+
+
+
+      {/* History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                 <div>
+                    <h3 className="text-xl font-bold text-slate-800">Attendance History</h3>
+                    <p className="text-sm text-slate-500">View and export past records</p>
+                 </div>
+                 <button onClick={() => setShowHistoryModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                    <X size={24} className="text-slate-500" />
+                 </button>
+              </div>
+              
+              <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-slate-700">Select Month:</span>
+                    <input 
+                        type="month" 
+                        value={selectedMonth} 
+                        onChange={(e) => setSelectedMonth(e.target.value)} 
+                        className="p-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <button 
+                      onClick={() => exportToCSV(selectedMonth)}
+                      className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                      <Download size={16} /> Export {selectedMonth} CSV
+                  </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Date</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Employee</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Status</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Times</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {filteredAttendance.sort((a, b) => b.date.localeCompare(a.date)).map(att => {
+                            const emp = employees.find(e => e.id === att.employeeId);
+                            return (
+                                <tr key={`${att.employeeId}-${att.date}`} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{att.date}</td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-slate-900">{emp?.fullName || att.employeeId}</div>
+                                        <div className="text-xs text-slate-500">{emp?.designation}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                          ${att.status === 'Present' ? 'bg-green-100 text-green-800' : 
+                                            att.status === 'Half Day' ? 'bg-yellow-100 text-yellow-800' : 
+                                            att.status === 'LEAVE' ? 'bg-blue-100 text-blue-800' :
+                                            att.status === 'HALF_DAY_LEAVE' ? 'bg-purple-100 text-purple-800' :
+                                            'bg-red-100 text-red-800'}`}>
+                                          {att.status.replace('_', ' ')}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+                                        {att.checkIn ? `${att.checkIn} - ${att.checkOut || '?'}` : '-'}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        {filteredAttendance.length === 0 && (
+                            <tr><td colSpan={4} className="p-8 text-center text-slate-500">No records found for this month</td></tr>
+                        )}
+                    </tbody>
+                </table>
+              </div>
+              
+              <div className="p-6 border-t border-slate-100 flex justify-end">
+                 <button 
+                    onClick={() => setShowHistoryModal(false)}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                 >
+                    Close
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

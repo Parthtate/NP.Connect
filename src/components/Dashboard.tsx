@@ -91,6 +91,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
               <div>
                 <h1 className="text-3xl font-bold mb-2">Welcome back, {user.name}</h1>
                 <p className="text-slate-300">Have a productive day!</p>
+                {user.employeeId && (
+                  <div className="mt-3 inline-block bg-slate-800/50 px-3 py-1 rounded-lg border border-slate-700">
+                    <p className="text-xs text-slate-400 font-mono">ID: <span className="text-white font-bold">{user.employeeId}</span></p>
+                  </div>
+                )}
               </div>
               <div className="mt-6 md:mt-0 text-right">
                 <div className="text-5xl font-bold font-mono tracking-wider">
@@ -218,39 +223,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
                </div>
 
 
-            {/* My Documents Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <FileText size={20} className="text-blue-500"/> My Documents
-               </h3>
-               <div className="space-y-3">
-                  {myEmployeeId && employeeDocuments[myEmployeeId]?.map(doc => (
-                    <div key={doc.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                       <div className="flex items-center gap-3 overflow-hidden">
-                          <FileText size={16} className="text-slate-400 shrink-0" />
-                          <div>
-                            <p className="font-medium text-slate-900 text-sm truncate max-w-[150px]">{doc.fileName}</p>
-                            <p className="text-[10px] text-slate-500">{doc.documentType.replace('_', ' ').toUpperCase()}</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={async () => {
-                           if (onGetDocumentUrl) {
-                             const url = await onGetDocumentUrl(doc.filePath);
-                             if (url) window.open(url, '_blank');
-                           }
-                         }}
-                         className="text-blue-600 hover:text-blue-800 text-xs font-semibold"
-                       >
-                         View
-                       </button>
-                    </div>
-                  ))}
-                  {(!myEmployeeId || !employeeDocuments[myEmployeeId] || employeeDocuments[myEmployeeId].length === 0) && (
-                    <p className="text-slate-500 text-sm text-center">No documents uploaded</p>
-                  )}
-               </div>
-            </div>
+
       </div>
     );
   }

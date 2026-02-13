@@ -32,7 +32,8 @@ export enum ViewState {
   MY_PAYSLIPS = 'MY_PAYSLIPS',
   REPORTS = 'REPORTS',
   SETTINGS = 'SETTINGS',
-  PROFILE = 'PROFILE'
+  PROFILE = 'PROFILE',
+  DOCUMENTS = 'DOCUMENTS'
 }
 
 export interface Employee {

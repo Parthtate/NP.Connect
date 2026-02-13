@@ -9,6 +9,8 @@ import LeaveView from './src/components/LeaveView';
 import PayrollView from './src/components/PayrollView';
 import SettingsView from './src/components/SettingsView';
 import Reports from './src/components/Reports';
+import DocumentsView from './src/components/DocumentsView';
+
 import { ShieldCheck, User as UserIcon, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase, supabaseUrl } from './lib/supabaseClient';
 
@@ -1135,6 +1137,11 @@ const App: React.FC = () => {
                      return workingDays;
                    }}
               />;
+          case ViewState.DOCUMENTS:
+               return <DocumentsView 
+                   documents={currentUser?.employeeId ? (employeeDocuments[currentUser.employeeId] || []) : []}
+                   onGetDocumentUrl={getDocumentSignedUrl}
+               />;
           case ViewState.SETTINGS:
               return <SettingsView 
                    settings={settings}

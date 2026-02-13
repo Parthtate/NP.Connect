@@ -14,7 +14,8 @@ import {
   FileText,
   Mail,
   ShieldCheck,
-  UserCircle
+  UserCircle,
+  Folder
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -72,6 +73,7 @@ const Layout: React.FC<LayoutProps> = ({ user, currentView, onChangeView, onLogo
        items.push({ label: 'My Attendance', icon: CalendarCheck, id: ViewState.MY_ATTENDANCE });
        items.push({ label: 'My Leaves', icon: Coffee, id: ViewState.MY_LEAVES });
        items.push({ label: 'Payslips', icon: FileText, id: ViewState.MY_PAYSLIPS });
+       items.push({ label: 'Documents', icon: Folder, id: ViewState.DOCUMENTS });
     }
 
     if (role === UserRole.HR || role === UserRole.ADMIN) {

@@ -61,6 +61,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, employees, attendance, leav
     
     // Calculate total days used
     const usedDays = approvedLeaves.reduce((total, leave) => {
+      // Check for half day
+      if (leave.session && leave.session !== 'FULL_DAY') {
+          return total + 0.5;
+      }
+
       const start = new Date(leave.startDate);
       const end = new Date(leave.endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
